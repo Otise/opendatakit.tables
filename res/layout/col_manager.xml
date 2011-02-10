@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/column_manager_view" 
+	android:layout_width="fill_parent" 
+	android:layout_height="wrap_content" >
+
+	<TableLayout
+		android:id="@+id/prime_sort_table"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content" 
+		android:stretchColumns="1" >
+		<TableRow>
+			<TextView
+				android:layout_column="1"
+				android:padding="3dip"
+				android:text = "Index Column :" />
+			<TextView 
+				android:id = "@+id/prime_tv"
+				android:padding="3dip"
+				android:gravity = "right"
+				android:text = "None" />
+		</TableRow>
+		<TableRow>
+			<TextView
+				android:layout_column="1"
+				android:padding="3dip"
+				android:text = "Order-by Column :" />
+			<TextView 
+				android:id = "@+id/sortby_tv"
+				android:padding="3dip"
+				android:gravity = "right"
+				android:text = "None" />
+		</TableRow>
+	</TableLayout>
+	
+	<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+		android:id="@+id/add_column_button"
+    	android:layout_width="fill_parent"
+    	android:layout_height="64dip"
+    	android:background="#C0C0C0"
+    	android:gravity="center_vertical"
+    	android:ignoreGravity="@+id/icon"
+    	android:layout_below="@+id/prime_sort_table"
+    	>
+    	<ImageView android:id="@+id/icon"
+	        android:paddingLeft="9dip"
+	        android:layout_centerVertical="true"
+	        android:layout_width="wrap_content"
+	        android:layout_height="wrap_content"
+			android:src="@drawable/addsign"
+		/>
+		<TextView android:id="@+id/label"
+	        android:textAppearance="?android:attr/textAppearanceMedium"
+	        android:textColor="#000000"
+	        android:layout_width="wrap_content"
+	        android:paddingLeft="9dip"
+	        android:layout_height="wrap_content"
+	        android:layout_alignWithParentIfMissing="true"
+	        android:layout_toRightOf="@id/icon"
+			android:layout_centerVertical="true"
+	        android:ellipsize="marquee"
+	        android:singleLine="true"
+	        android:text="Add a Column"
+			/>
+	</RelativeLayout>
+
+	<yoonsung.odk.spreadsheet.Library.TouchListView
+		xmlns:android="http://schemas.android.com/apk/res/android"
+		xmlns:tlv="http://schemas.android.com/apk/res/yoonsung.odk.spreadsheet"
+	
+		android:id="@android:id/list"
+		android:layout_width="fill_parent"
+		android:layout_height="fill_parent"
+		android:layout_below="@+id/add_column_button"
+		android:drawSelectorOnTop="false"
+		tlv:normal_height="64dip"
+		tlv:grabber="@+id/icon"
+		tlv:remove_mode="slideRight"
+	/>
+</RelativeLayout>
