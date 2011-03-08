@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout 
+xmlns:android="http://schemas.android.com/apk/res/android"
+android:id="@+id/widget50" 
+android:layout_width="fill_parent" 
+android:layout_height="fill_parent" 
+> 
+	<RelativeLayout
+		android:id="@+id/command"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content" >
+		<ImageButton
+		android:id="@+id/back"
+		android:layout_width="35px"
+		android:layout_height="wrap_content"
+		android:src="@drawable/previousicon" />
+		<ImageButton
+		android:id="@+id/refresh"
+		android:layout_width="35px"
+		android:layout_height="wrap_content"
+		android:layout_toRightOf="@+id/back"
+		android:src="@drawable/refreshicon" />
+		<LinearLayout
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		android:layout_toRightOf="@+id/refresh"
+		>
+		<EditText
+		android:id="@+id/edit_box"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_weight="0.35"  />
+		<Button 
+		android:id="@+id/enter"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_weight="0.70"
+		android:layout_toRightOf="@+id/edit_box"
+		android:text="@string/button_enter" />
+		<ImageButton
+		android:id="@+id/add_row"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_weight="0.75"
+		android:layout_toRightOf="@+id/enter"
+		android:src="@drawable/addnewrow" />
+		</LinearLayout>
+	</RelativeLayout>
+	
+	<TextView
+	android:id="@+id/tableNameLed"
+	android:layout_width="fill_parent"
+	android:layout_height="wrap_content"
+	android:textStyle="bold"
+	android:gravity="center"
+	android:layout_below="@+id/command" ></TextView>
+	
+	<TableLayout
+		android:id="@+id/spreadsheetWrapper"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:layout_below="@+id/tableNameLed" >
+		<TableRow
+			android:id="@+id/spreadsheetRowWrapper"
+			android:layout_width="fill_parent"
+			android:layout_height="wrap_content">
+		</TableRow>
+	</TableLayout>
+</RelativeLayout>
