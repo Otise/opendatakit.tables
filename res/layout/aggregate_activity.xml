@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/aggregate_activity_layout"
+	android:layout_width="fill_parent"
+	android:layout_height="fill_parent" 
+	android:orientation="vertical" 
+	android:background="#FFFFFF">
+	
+	<TextView
+		android:id="@+id/aggregate_activity_uri_label"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="Aggregate URI:" />
+	
+	<EditText
+		android:id="@+id/aggregate_activity_uri_field"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="http://" />
+	
+	<TextView
+		android:id="@+id/aggregate_activity_username_label"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="Username:" />
+	
+	<EditText
+		android:id="@+id/aggregate_activity_username_field"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content" />
+	
+	<Button
+		android:id="@+id/aggregate_activity_list_tables_button"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="List Tables" />
+	
+	<Spinner
+		android:id="@+id/aggregate_activity_table_list_spinner"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content" />
+	
+	<Button
+		android:id="@+id/aggregate_activity_download_table_button"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="Download Table" />
+	
+	<Button
+		android:id="@+id/aggregate_activity_pull_table_button"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="Pull Table" />
+	
+	<Button
+		android:id="@+id/aggregate_activity_push_table_button"
+		android:layout_width="fill_parent"
+		android:layout_height="wrap_content"
+		android:text="Push Table" />
+	
+</LinearLayout>
