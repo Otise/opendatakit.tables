@@ -1,6 +1,7 @@
 package yoonsung.odk.spreadsheet.data;
 
 import java.util.Arrays;
+
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -12,7 +13,7 @@ import android.util.Log;
  * @author hkworden@gmail.com (Hilary Worden)
  */
 public class TableProperties {
-    
+
     // the name of the table properties table in the database
     private static final String DB_TABLENAME = "tableProps";
     // names of columns in the table properties table
@@ -29,7 +30,9 @@ public class TableProperties {
     private static final String DB_LAST_SYNC_TIME = "lastSyncTime";
     private static final String DB_DETAIL_VIEW_FILE = "detailViewFile";
     private static final String DB_LIST_DISPLAY_FORMAT = "listDisplayFormat";
-    
+    private static final String DB_STATE = "state";
+    private static final String DB_TRANSACTIONING = "transactioning";
+
     // the SQL where clause to use for selecting, updating, or deleting the row
     // for a given table
     private static final String ID_WHERE_SQL = DB_TABLE_ID + " = ?";
@@ -49,19 +52,38 @@ public class TableProperties {
         DB_SYNC_MODIFICATION_NUMBER,
         DB_LAST_SYNC_TIME,
         DB_DETAIL_VIEW_FILE,
-        DB_LIST_DISPLAY_FORMAT
+        DB_LIST_DISPLAY_FORMAT,
+        DB_STATE,
+        DB_TRANSACTIONING, 
     };
-    
+
     public class TableType {
         public static final int DATA = 0;
         public static final int SECURITY = 1;
         public static final int SHORTCUT = 2;
         private TableType() {}
     }
-    
+
+    public class State {
+        public static final int REST = 0;
+        public static final int INSERTING = 1;
+        public static final int UPDATING = 2;
+        public static final int DELETING = 3;
+        public static final int CONFLICTING = 4;
+
+        private State() {}
+    }
+
+    public class Transactioning {
+        public static final int FALSE = 0;
+        public static final int TRUE = 1;
+
+        private Transactioning() {}
+    }
+
     private final DbHelper dbh;
     private final String[] whereArgs;
-    
+
     private final long tableId;
     private String dbTableName;
     private String displayName;
@@ -73,18 +95,21 @@ public class TableProperties {
     private long readSecurityTableId;
     private long writeSecurityTableId;
     private int syncModificationNumber;
-    private long lastSyncTime;
+    private String lastSyncTime;
     private String detailViewFilename;
     private String listDisplayFormat;
-    
+    private int state;
+    private int transactioning;
+
     private TableProperties(DbHelper dbh, long tableId, String dbTableName,
             String displayName, int tableType, String[] columnOrder,
             String[] primeColumns, String sortColumn, long readSecurityTableId,
             long writeSecurityTableId, int syncModificationNumber,
-            long lastSyncTime, String detailViewFilename,
-            String listDisplayFormat) {
+            String lastSyncTime, String detailViewFilename,
+            String listDisplayFormat, int state,
+            int transactioning) {
         this.dbh = dbh;
-        whereArgs = new String[] {String.valueOf(tableId)};
+        whereArgs = new String[] { String.valueOf(tableId) };
         this.tableId = tableId;
         this.dbTableName = dbTableName;
         this.displayName = displayName;
@@ -99,37 +124,38 @@ public class TableProperties {
         this.lastSyncTime = lastSyncTime;
         this.detailViewFilename = detailViewFilename;
         this.listDisplayFormat = listDisplayFormat;
+        this.state = state;
+        this.transactioning = transactioning;
     }
-    
+
     public static TableProperties getTablePropertiesForTable(DbHelper dbh,
             long tableId) {
         TableProperties[] res = queryForTableProperties(dbh, ID_WHERE_SQL,
                 new String[] {String.valueOf(tableId)});
         return res[0];
     }
-    
+
     public static TableProperties[] getTablePropertiesForAll(DbHelper dbh) {
         return queryForTableProperties(dbh, null, null);
     }
-    
-    public static TableProperties[] getTablePropertiesForDataTables(
-            DbHelper dbh) {
+
+    public static TableProperties[] getTablePropertiesForDataTables(DbHelper dbh) {
         return queryForTableProperties(dbh, TYPE_WHERE_SQL,
-                new String[] {String.valueOf(TableType.DATA)});
+                new String[] { String.valueOf(TableType.DATA) });
     }
-    
+
     public static TableProperties[] getTablePropertiesForSecurityTables(
             DbHelper dbh) {
         return queryForTableProperties(dbh, TYPE_WHERE_SQL,
-                new String[] {String.valueOf(TableType.SECURITY)});
+                new String[] { String.valueOf(TableType.SECURITY) });
     }
-    
+
     public static TableProperties[] getTablePropertiesForShortcutTables(
             DbHelper dbh) {
         return queryForTableProperties(dbh, TYPE_WHERE_SQL,
-                new String[] {String.valueOf(TableType.SHORTCUT)});
+                new String[] { String.valueOf(TableType.SHORTCUT) });
     }
-    
+
     private static TableProperties[] queryForTableProperties(DbHelper dbh,
             String where, String[] whereArgs) {
         SQLiteDatabase db = dbh.getReadableDatabase();
@@ -145,29 +171,34 @@ public class TableProperties {
         int sortColumnIndex = c.getColumnIndexOrThrow(DB_SORT_COLUMN);
         int rsTableId = c.getColumnIndexOrThrow(DB_READ_SECURITY_TABLE_ID);
         int wsTableId = c.getColumnIndexOrThrow(DB_WRITE_SECURITY_TABLE_ID);
-        int syncModNumIndex = c.getColumnIndexOrThrow(
-                DB_SYNC_MODIFICATION_NUMBER);
+        int syncModNumIndex = c
+                .getColumnIndexOrThrow(DB_SYNC_MODIFICATION_NUMBER);
         int lastSyncTimeIndex = c.getColumnIndexOrThrow(DB_LAST_SYNC_TIME);
         int detailViewFileIndex = c.getColumnIndexOrThrow(DB_DETAIL_VIEW_FILE);
-        int listDisplayFormatIndex = c.getColumnIndexOrThrow(
-                DB_LIST_DISPLAY_FORMAT);
+        int listDisplayFormatIndex = c
+                .getColumnIndexOrThrow(DB_LIST_DISPLAY_FORMAT);
+        int stateIndex = c.getColumnIndexOrThrow(DB_STATE);
+        int transactioningIndex = c.getColumnIndexOrThrow(DB_TRANSACTIONING);
+
         int i = 0;
         c.moveToFirst();
         while (i < tps.length) {
             String columnOrderValue = c.getString(columnOrderIndex);
             String[] columnOrder = (columnOrderValue.length() == 0) ?
-                    new String[] {} : columnOrderValue.split("/");
+                new String[] {} : columnOrderValue.split("/");
             String primeOrderValue = c.getString(primeColumnsIndex);
             String[] primeList = (primeOrderValue.length() == 0) ?
-                    new String[] {} : primeOrderValue.split("/");
+                new String[] {} : primeOrderValue.split("/");
             tps[i] = new TableProperties(dbh, c.getLong(tableIdIndex),
                     c.getString(dbtnIndex), c.getString(displayNameIndex),
                     c.getInt(tableTypeIndex), columnOrder, primeList,
                     c.getString(sortColumnIndex), c.getLong(rsTableId),
                     c.getLong(wsTableId), c.getInt(syncModNumIndex),
-                    c.getLong(lastSyncTimeIndex),
+                    c.getString(lastSyncTimeIndex),
                     c.getString(detailViewFileIndex),
-                    c.getString(listDisplayFormatIndex));
+                    c.getString(listDisplayFormatIndex),
+                    c.getInt(stateIndex),
+                    c.getInt(transactioningIndex));
             i++;
             c.moveToNext();
         }
@@ -175,7 +206,7 @@ public class TableProperties {
         db.close();
         return tps;
     }
-    
+
     public static String createDbTableName(DbHelper dbh, String displayName) {
         TableProperties[] allProps = getTablePropertiesForAll(dbh);
         String baseName = displayName.replace(' ', '_');
@@ -191,7 +222,7 @@ public class TableProperties {
             suffix++;
         }
     }
-    
+
     private static boolean nameConflict(String dbTableName,
             TableProperties[] allProps) {
         for (TableProperties tp : allProps) {
@@ -201,7 +232,7 @@ public class TableProperties {
         }
         return false;
     }
-    
+
     public static TableProperties addTable(DbHelper dbh, String dbTableName,
             String displayName, int tableType) {
         ContentValues values = new ContentValues();
@@ -217,21 +248,31 @@ public class TableProperties {
         values.put(DB_LAST_SYNC_TIME, -1);
         values.putNull(DB_DETAIL_VIEW_FILE);
         values.putNull(DB_LIST_DISPLAY_FORMAT);
+        values.put(DB_STATE, State.INSERTING);
+        values.put(DB_TRANSACTIONING, Transactioning.FALSE);
         SQLiteDatabase db = dbh.getWritableDatabase();
         db.beginTransaction();
         long id = db.insert(DB_TABLENAME, null, values);
         Log.d("TP", "new id=" + id);
         TableProperties tp = new TableProperties(dbh, id, dbTableName,
                 displayName, tableType, new String[0], new String[0], null, -1,
-                -1, -1, -1, null, null);
+                -1, -1, -1, null, null, State.INSERTING, Transactioning.FALSE);
         DbTable.createDbTable(db, tp);
         db.setTransactionSuccessful();
         db.endTransaction();
         db.close();
         return tp;
     }
-    
+
     public void deleteTable() {
+        SQLiteDatabase db = dbh.getWritableDatabase();
+        ContentValues values = new ContentValues();
+        values.put(DB_STATE, State.DELETING);
+        db.update(DB_TABLENAME, values, ID_WHERE_SQL, whereArgs);
+        db.close();
+    }
+
+    public void deleteTableActual() {
         ColumnProperties[] columns = getColumns();
         SQLiteDatabase db = dbh.getWritableDatabase();
         db.beginTransaction();
@@ -244,25 +285,25 @@ public class TableProperties {
         db.endTransaction();
         db.close();
     }
-    
+
     public long getTableId() {
         return tableId;
     }
-    
+
     /**
      * @return the table's name in the database
      */
     public String getDbTableName() {
         return dbTableName;
     }
-    
+
     /**
      * @return the table's display name
      */
     public String getDisplayName() {
         return displayName;
     }
-    
+
     /**
      * Sets the table's display name.
      * @param displayName the new display name
@@ -271,14 +312,14 @@ public class TableProperties {
         setStringProperty(DB_DISPLAY_NAME, displayName);
         this.displayName = displayName;
     }
-    
+
     /**
      * @return the table's type
      */
     public int getTableType() {
         return tableType;
     }
-    
+
     /**
      * Sets the table's type.
      * @param tableType the new table type
@@ -287,7 +328,7 @@ public class TableProperties {
         setIntProperty(DB_TABLE_TYPE, tableType);
         this.tableType = tableType;
     }
-    
+
     /**
      * @return an unordered array of the table's columns
      */
@@ -307,7 +348,7 @@ public class TableProperties {
         }
         return columns;
     }
-    
+
     public ColumnProperties getColumnByDbName(String colDbName) {
         int colIndex = getColumnIndex(colDbName);
         if (colIndex < 0) {
@@ -315,7 +356,7 @@ public class TableProperties {
         }
         return getColumns()[colIndex];
     }
-    
+
     public int getColumnIndex(String colDbName) {
         String[] colOrder = getColumnOrder();
         for (int i = 0; i < colOrder.length; i++) {
@@ -325,7 +366,7 @@ public class TableProperties {
         }
         return -1;
     }
-    
+
     public String getColumnByDisplayName(String displayName) {
         ColumnProperties[] cps = getColumns();
         for (ColumnProperties cp : cps) {
@@ -336,7 +377,7 @@ public class TableProperties {
         }
         return null;
     }
-    
+
     public String getColumnByAbbreviation(String abbreviation) {
         ColumnProperties[] cps = getColumns();
         for (ColumnProperties cp : cps) {
@@ -347,7 +388,7 @@ public class TableProperties {
         }
         return null;
     }
-    
+
     /**
      * Adds a column to the table using a default database name.
      * @param displayName the column's display name
@@ -370,7 +411,7 @@ public class TableProperties {
             suffix++;
         }
     }
-    
+
     private boolean columnNameConflict(String name) {
         for (ColumnProperties cp : columns) {
             if (cp.getColumnDbName().equals(name)) {
@@ -379,7 +420,7 @@ public class TableProperties {
         }
         return false;
     }
-    
+
     /**
      * Adds a column to the table.
      * @param displayName the column's display name
@@ -415,7 +456,7 @@ public class TableProperties {
         // returning new ColumnProperties
         return cp;
     }
-    
+
     /**
      * Deletes a column from the table.
      * @param columnDbName the database name of the column to delete
@@ -484,14 +525,14 @@ public class TableProperties {
         }
         setColumnOrder(newColumnOrder);
     }
-    
+
     /**
      * @return an ordered array of the database names of the table's columns
      */
     public String[] getColumnOrder() {
         return columnOrder;
     }
-    
+
     /**
      * Sets the column order.
      * @param columnOrder an ordered array of the database names of the table's
@@ -640,7 +681,7 @@ public class TableProperties {
     public String getDetailViewFilename() {
         return detailViewFilename;
     }
-    
+
     /**
      * Sets the table's detail view filename.
      * @param filename the new filename
@@ -649,14 +690,14 @@ public class TableProperties {
         setStringProperty(DB_DETAIL_VIEW_FILE, filename);
         this.detailViewFilename = filename;
     }
-    
+
     /**
      * @return the format for list displays
      */
     public String getListDisplayFormat() {
         return listDisplayFormat;
     }
-    
+
     /**
      * Sets the table's list display format.
      * @param format the new list display format
@@ -665,7 +706,30 @@ public class TableProperties {
         setStringProperty(DB_LIST_DISPLAY_FORMAT, format);
         this.listDisplayFormat = format;
     }
-    
+
+    public int getState() {
+        return state;
+    }
+
+    public void setState(int state) {
+        // only can move to and from REST state, 
+        // e.g. no skipping straight from INSERTING to UPDATING
+        if (state == State.REST || this.state == State.REST)
+        {
+            setIntProperty(DB_STATE, state);
+            this.state = state;
+        }
+    }
+
+    public int getTransactioning() {
+        return transactioning;
+    }
+
+    public void setTransactioning(int transactioning) {
+        setIntProperty(DB_TRANSACTIONING, transactioning);
+        this.transactioning = transactioning;
+    }
+
     private void setIntProperty(String property, int value) {
         ContentValues values = new ContentValues();
         values.put(property, value);
@@ -673,7 +737,7 @@ public class TableProperties {
         db.update(DB_TABLENAME, values, ID_WHERE_SQL, whereArgs);
         db.close();
     }
-    
+
     private void setLongProperty(String property, long value) {
         ContentValues values = new ContentValues();
         values.put(property, value);
@@ -681,13 +745,13 @@ public class TableProperties {
         db.update(DB_TABLENAME, values, ID_WHERE_SQL, whereArgs);
         db.close();
     }
-    
+
     private void setStringProperty(String property, String value) {
         SQLiteDatabase db = dbh.getWritableDatabase();
         setStringProperty(property, value, db);
         db.close();
     }
-    
+
     private void setStringProperty(String property, String value,
             SQLiteDatabase db) {
         ContentValues values = new ContentValues();
@@ -696,7 +760,7 @@ public class TableProperties {
         Log.d("TP", "rows updated:" + ra);
         Log.d("TP", "values:" + values.toString());
     }
-    
+
     static String getTableCreateSql() {
         return "CREATE TABLE " + DB_TABLENAME + "(" +
                        DB_TABLE_ID + " INTEGER PRIMARY KEY" +
@@ -712,6 +776,8 @@ public class TableProperties {
                 ", " + DB_LAST_SYNC_TIME + " INTEGER NOT NULL" +
                 ", " + DB_DETAIL_VIEW_FILE + " TEXT" +
                 ", " + DB_LIST_DISPLAY_FORMAT + " TEXT" +
+                ", " + DB_STATE + " INTEGER NOT NULL" +
+                ", " + DB_TRANSACTIONING + " INTEGER NOT NULL" +
                 ")";
     }
 }
