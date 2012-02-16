@@ -20,6 +20,7 @@ import org.opendatakit.aggregate.odktables.client.exception.RowOutOfSynchExcepti
 import org.opendatakit.aggregate.odktables.client.exception.TableAlreadyExistsException;
 import org.opendatakit.aggregate.odktables.client.exception.TableDoesNotExistException;
 import org.opendatakit.common.ermodel.simple.AttributeType;
+import android.content.ContentValues;
 
 import yoonsung.odk.spreadsheet.data.ColumnProperties;
 import yoonsung.odk.spreadsheet.data.ColumnProperties.ColumnType;
@@ -28,8 +29,7 @@ import yoonsung.odk.spreadsheet.data.DbHelper;
 import yoonsung.odk.spreadsheet.data.DbTable;
 import yoonsung.odk.spreadsheet.data.Table;
 import yoonsung.odk.spreadsheet.data.TableProperties;
-import yoonsung.odk.spreadsheet.data.TableProperties.State;
-import yoonsung.odk.spreadsheet.data.TableProperties.Transactioning;
+import yoonsung.odk.spreadsheet.sync.SyncUtil;
 
 public class AggregateSyncProcessor {
 
@@ -84,9 +84,9 @@ public class AggregateSyncProcessor {
 		Table rowsToInsert;
 		Table rowsToUpdate;
 		Table rowsToDelete;
-		switch (tp.getState()) {
-		case State.INSERTING:
-			rowsToInsert = getRows(table, State.INSERTING);
+		switch (tp.getSyncState()) {
+		case SyncUtil.State.INSERTING:
+			rowsToInsert = getRows(table, SyncUtil.State.INSERTING);
 
 			beginRowsTransaction(table, rowsToInsert.getRowIds());
 
@@ -96,12 +96,12 @@ public class AggregateSyncProcessor {
 			endRowsTransaction(table, rowsToInsert.getRowIds());
 
 			break;
-		case State.UPDATING:
+		case SyncUtil.State.UPDATING:
 			updateFromServer(tp, table);
 
-			rowsToInsert = getRows(table, State.INSERTING);
-			rowsToUpdate = getRows(table, State.UPDATING);
-			rowsToDelete = getRows(table, State.DELETING);
+			rowsToInsert = getRows(table, SyncUtil.State.INSERTING);
+			rowsToUpdate = getRows(table, SyncUtil.State.UPDATING);
+			rowsToDelete = getRows(table, SyncUtil.State.DELETING);
 
 			int[] rowIds = getAllRowIds(rowsToInsert, rowsToUpdate,
 					rowsToDelete);
@@ -110,17 +110,15 @@ public class AggregateSyncProcessor {
 			insertRows(tp, table, rowsToInsert);
 			updateRows(tp, table, rowsToUpdate);
 			deleteRows(tp, table, rowsToDelete);
-			String whereClause = DbTable.rowIdEquals;
 			for (int rowId : rowsToDelete.getRowIds()) {
-				String[] whereArgs = { String.valueOf(rowId) };
-				table.deleteRowsActual(whereClause, whereArgs);
+			    table.deleteRowActual(rowId);
 			}
 
 			rowIds = getAllRowIds(rowsToInsert, rowsToUpdate);
 			endRowsTransaction(table, rowIds);
 
 			break;
-		case State.DELETING:
+		case SyncUtil.State.DELETING:
 			beginRowsTransaction(table, new int[0]);
 			removeTableSynchronization(String.valueOf(tp.getTableId()));
 			tp.deleteTableActual();
@@ -139,7 +137,7 @@ public class AggregateSyncProcessor {
 				tp.getSyncModificationNumber());
 
 		Table allRowIds = table.getRaw(new String[] { DbTable.DB_ROW_ID,
-				DbTable.DB_SYNC_ID, DbTable.DB_STATE }, null, null, null);
+				DbTable.DB_SYNC_ID, DbTable.DB_SYNC_STATE }, null, null, null);
 		List<SynchronizedRow> rowsToInsert = new ArrayList<SynchronizedRow>();
 		List<SynchronizedRow> rowsToUpdate = new ArrayList<SynchronizedRow>();
 		List<SynchronizedRow> rowsToConflict = new ArrayList<SynchronizedRow>();
@@ -151,7 +149,7 @@ public class AggregateSyncProcessor {
 				if (row.getAggregateRowIdentifier().equals(syncRowId)) {
 					row.setRowID(String.valueOf(allRowIds.getRowId(i)));
 					found = true;
-					if (state == State.REST)
+					if (state == SyncUtil.State.REST)
 						rowsToUpdate.add(row);
 					else
 						rowsToConflict.add(row);
@@ -164,49 +162,48 @@ public class AggregateSyncProcessor {
 		// TODO: refactor these for loops?
 
 		for (SynchronizedRow row : rowsToConflict) {
-			Map<String, String> values = new HashMap<String, String>();
+			ContentValues values = new ContentValues();
 			values.put(DbTable.DB_SYNC_ID, row.getAggregateRowIdentifier());
 			values.put(DbTable.DB_SYNC_TAG, row.getRevisionTag());
-			values.put(DbTable.DB_STATE, String.valueOf(State.CONFLICTING));
+			values.put(DbTable.DB_SYNC_STATE, String.valueOf(
+			        SyncUtil.State.CONFLICTING));
 			values.put(DbTable.DB_TRANSACTIONING,
-					String.valueOf(Transactioning.FALSE));
-			String whereClause = DbTable.rowIdEquals;
-			String[] whereArgs = { row.getRowID() };
-			table.updateRowsActual(values, whereClause, whereArgs);
+					String.valueOf(SyncUtil.Transactioning.FALSE));
+			table.actualUpdateRowByRowId(Integer.valueOf(row.getRowID()),
+			        values);
 
 			for (Entry<String, String> entry : row.getColumnValuePairs()
 					.entrySet())
 				values.put(entry.getKey(), entry.getValue());
-
-			table.addRow(values);
+			
+			table.actualAddRow(values);
 		}
 
 		for (SynchronizedRow row : rowsToUpdate) {
-			Map<String, String> values = new HashMap<String, String>();
+			ContentValues values = new ContentValues();
 			values.put(DbTable.DB_SYNC_ID, row.getAggregateRowIdentifier());
 			values.put(DbTable.DB_SYNC_TAG, row.getRevisionTag());
-			values.put(DbTable.DB_STATE, String.valueOf(State.REST));
+			values.put(DbTable.DB_SYNC_STATE, String.valueOf(SyncUtil.State.REST));
 			values.put(DbTable.DB_TRANSACTIONING,
-					String.valueOf(Transactioning.FALSE));
+					String.valueOf(SyncUtil.Transactioning.FALSE));
 			for (Entry<String, String> entry : row.getColumnValuePairs()
 					.entrySet())
 				values.put(entry.getKey(), entry.getValue());
-			String whereClause = DbTable.rowIdEquals;
-			String[] whereArgs = { row.getRowID() };
-			table.updateRowsActual(values, whereClause, whereArgs);
+			table.actualUpdateRowByRowId(Integer.valueOf(row.getRowID()),
+			        values);
 		}
 
 		for (SynchronizedRow row : rowsToInsert) {
-			Map<String, String> values = new HashMap<String, String>();
+			ContentValues values = new ContentValues();
 			values.put(DbTable.DB_SYNC_ID, row.getAggregateRowIdentifier());
 			values.put(DbTable.DB_SYNC_TAG, row.getRevisionTag());
-			values.put(DbTable.DB_STATE, String.valueOf(State.REST));
+			values.put(DbTable.DB_SYNC_STATE, SyncUtil.State.REST);
 			values.put(DbTable.DB_TRANSACTIONING,
-					String.valueOf(Transactioning.FALSE));
+			        SyncUtil.Transactioning.FALSE);
 			for (Entry<String, String> entry : row.getColumnValuePairs()
 					.entrySet())
 				values.put(entry.getKey(), entry.getValue());
-			table.addRow(values);
+			table.actualAddRow(values);
 		}
 		tp.setSyncModificationNumber(mod.getModificationNumber());
 	}
@@ -214,9 +211,9 @@ public class AggregateSyncProcessor {
 	public Table getRows(DbTable table, int state) {
 		Table rows = table.getRaw(
 				null,
-				new String[] { DbTable.DB_STATE, DbTable.DB_TRANSACTIONING },
+				new String[] { DbTable.DB_SYNC_STATE, DbTable.DB_TRANSACTIONING },
 				new String[] { String.valueOf(state),
-						String.valueOf(Transactioning.FALSE) }, null);
+						String.valueOf(SyncUtil.Transactioning.FALSE) }, null);
 		return rows;
 	}
 
@@ -292,12 +289,11 @@ public class AggregateSyncProcessor {
 
 			tp.setSyncModificationNumber(mod.getModificationNumber());
 			for (SynchronizedRow row : mod.getRows()) {
-				Map<String, String> values = new HashMap<String, String>();
+			    ContentValues values = new ContentValues();
 				values.put(DbTable.DB_SYNC_ID, row.getAggregateRowIdentifier());
 				values.put(DbTable.DB_SYNC_TAG, row.getRevisionTag());
-				String whereClause = DbTable.rowIdEquals;
-				String[] whereArgs = { row.getRowID() };
-				table.updateRowsActual(values, whereClause, whereArgs);
+				table.actualUpdateRowByRowId(Integer.parseInt(row.getRowID()),
+				        values);
 			}
 		}
 	}
@@ -352,12 +348,11 @@ public class AggregateSyncProcessor {
 	
 			tp.setSyncModificationNumber(mod.getModificationNumber());
 			for (SynchronizedRow row : mod.getRows()) {
-				Map<String, String> values = new HashMap<String, String>();
+			    ContentValues values = new ContentValues();
 				values.put(DbTable.DB_SYNC_ID, row.getAggregateRowIdentifier());
 				values.put(DbTable.DB_SYNC_TAG, row.getRevisionTag());
-				String whereClause = DbTable.syndIdEquals;
-				String[] whereArgs = { row.getAggregateRowIdentifier() };
-				table.updateRowsActual(values, whereClause, whereArgs);
+				table.actualUpdateRowBySyncId(row.getAggregateRowIdentifier(),
+				        values);
 			}
 		}
 	}
@@ -366,7 +361,7 @@ public class AggregateSyncProcessor {
 		return colName.equals(DbTable.DB_LAST_MODIFIED_TIME)
 				|| colName.equals(DbTable.DB_ROW_ID)
 				|| colName.equals(DbTable.DB_SRC_PHONE_NUMBER)
-				|| colName.equals(DbTable.DB_STATE)
+				|| colName.equals(DbTable.DB_SYNC_STATE)
 				|| colName.equals(DbTable.DB_SYNC_ID)
 				|| colName.equals(DbTable.DB_SYNC_TAG)
 				|| colName.equals(DbTable.DB_TRANSACTIONING);
@@ -409,41 +404,37 @@ public class AggregateSyncProcessor {
 	}
 
 	public void beginTableTransaction(TableProperties tp) {
-		tp.setTransactioning(Transactioning.TRUE);
+		tp.setTransactioning(SyncUtil.Transactioning.TRUE);
 	}
 
 	public void endTableTransaction(TableProperties tp) {
-		tp.setState(State.REST);
-		tp.setTransactioning(Transactioning.FALSE);
+		tp.setSyncState(SyncUtil.State.REST);
+		tp.setTransactioning(SyncUtil.Transactioning.FALSE);
 	}
 
 	public void beginRowsTransaction(DbTable table, int[] rowIds) {
-		updateRowsTransactioning(table, rowIds, Transactioning.TRUE);
+		updateRowsTransactioning(table, rowIds, SyncUtil.Transactioning.TRUE);
 	}
 
 	public void endRowsTransaction(DbTable table, int[] rowIds) {
-		updateRowsState(table, rowIds, State.REST);
-		updateRowsTransactioning(table, rowIds, Transactioning.FALSE);
+		updateRowsState(table, rowIds, SyncUtil.State.REST);
+		updateRowsTransactioning(table, rowIds, SyncUtil.Transactioning.FALSE);
 	}
 
 	public void updateRowsState(DbTable table, int[] rowIds, int state) {
-		Map<String, String> values = new HashMap<String, String>();
-		values.put(DbTable.DB_STATE, String.valueOf(state));
-		String whereClause = DbTable.rowIdEquals;
+		ContentValues values = new ContentValues();
+		values.put(DbTable.DB_SYNC_STATE, state);
 		for (int rowId : rowIds) {
-			String[] whereArgs = { String.valueOf(rowId) };
-			table.updateRowsActual(values, whereClause, whereArgs);
+			table.actualUpdateRowByRowId(rowId, values);
 		}
 	}
 
 	public void updateRowsTransactioning(DbTable table, int[] rowIds,
 			int transactioning) {
-		Map<String, String> values = new HashMap<String, String>();
+		ContentValues values = new ContentValues();
 		values.put(DbTable.DB_TRANSACTIONING, String.valueOf(transactioning));
-		String whereClause = DbTable.rowIdEquals;
 		for (int rowId : rowIds) {
-			String[] whereArgs = { String.valueOf(rowId) };
-			table.updateRowsActual(values, whereClause, whereArgs);
+			table.actualUpdateRowByRowId(rowId, values);
 		}
 	}
 }

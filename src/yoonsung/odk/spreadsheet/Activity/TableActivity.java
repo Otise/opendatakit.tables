@@ -153,7 +153,7 @@ public abstract class TableActivity extends Activity
 		    bounceToTableManager();
 		    return;
 		}
-        dbh = new DbHelper(this);
+        dbh = DbHelper.getDbHelper(this);
         dp = new DisplayPrefs(this, tableId);
         init();
 		Log.d("TA", "colOrder in onCreate():" + Arrays.toString(colOrder));
@@ -165,7 +165,7 @@ public abstract class TableActivity extends Activity
 		searchConstraints = new HashMap<String, String>();
 		collectionRowNum = -1;
 		selectedCellID = -1;
-		cdv = new CustomDetailView(this);
+		cdv = new CustomDetailView(this, tp.getDetailViewFilename());
         tableWrapper = (LinearLayout) findViewById(R.id.tableWrapper);
         setTableView();
         collectInstances = new HashMap<String, Integer>();
@@ -380,11 +380,11 @@ public abstract class TableActivity extends Activity
 	}
 	
 	/**
-	 * Opens the view settings screen.
+	 * Opens the table properties manager.
 	 */
-	protected void openViewSettingsScreen() {
-	    Intent i = new Intent(this, MainDisplaySettings.class);
-	    i.putExtra(MainDisplaySettings.TABLE_ID_INTENT_KEY, tableId);
+	protected void openTablePropertiesManager() {
+	    Intent i = new Intent(this, TablePropertiesManager.class);
+	    i.putExtra(TablePropertiesManager.INTENT_KEY_TABLE_ID, tableId);
 	    startActivity(i);
 	}
 	
@@ -394,7 +394,7 @@ public abstract class TableActivity extends Activity
 	 * ID)
 	 */
 	protected void deleteRow(int rowNum) {
-	    dbt.deleteRow(table.getRowId(rowNum));
+	    dbt.markDeleted(table.getRowId(rowNum));
 		refreshView();
 	}
 	
@@ -1560,7 +1560,6 @@ public abstract class TableActivity extends Activity
 	        data.put(key, value);
 	        if (cps[i].getColumnType() ==
 	            ColumnProperties.ColumnType.TABLE_JOIN) {
-	            DbHelper dbh = new DbHelper(this);
 	            long joinTableId = cps[i].getJoinTableId();
 	            TableProperties joinTp = TableProperties
 	                    .getTablePropertiesForTable(dbh, joinTableId);
@@ -1576,7 +1575,7 @@ public abstract class TableActivity extends Activity
                 LinearLayout.LayoutParams.MATCH_PARENT);
         tableLp.weight = 1;
         tableWrapper.removeAllViews();
-        tableWrapper.addView(cdv, tableLp);
         cdv.display(tableId, table.getRowId(rowNum), data, joinData);
+        tableWrapper.addView(cdv, tableLp);
 	}
 }
