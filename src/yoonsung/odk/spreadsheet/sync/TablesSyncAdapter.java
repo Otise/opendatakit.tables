@@ -50,7 +50,7 @@ public class TablesSyncAdapter extends AbstractThreadedSyncAdapter
 	    	{
 		    	URI aggregateURI = new URI(aggregateURIString);
 				SynchronizeAPI api = new SynchronizeAPI(aggregateURI, username);
-		    	DbHelper helper = new DbHelper(context);
+		    	DbHelper helper = DbHelper.getDbHelper(context);
 		    	AggregateSyncProcessor processor = new AggregateSyncProcessor(api, helper);
 		    	processor.synchronize(1);
 	    	}
