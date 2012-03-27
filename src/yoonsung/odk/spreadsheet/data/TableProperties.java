@@ -392,7 +392,7 @@ public class TableProperties {
         ColumnProperties[] cps = getColumns();
         for (ColumnProperties cp : cps) {
             String cdn = cp.getDisplayName();
-            if ((cdn != null) && (cdn.equals(displayName))) {
+            if ((cdn != null) && (cdn.equalsIgnoreCase(displayName))) {
                 return cp.getColumnDbName();
             }
         }
@@ -403,8 +403,25 @@ public class TableProperties {
         ColumnProperties[] cps = getColumns();
         for (ColumnProperties cp : cps) {
             String ca = cp.getAbbreviation();
-            if ((ca != null) && (ca.equals(abbreviation))) {
+            if ((ca != null) && (ca.equalsIgnoreCase(abbreviation))) {
                 return cp.getColumnDbName();
+            }
+        }
+        return null;
+    }
+    
+    public ColumnProperties getColumnByUserLabel(String name) {
+        ColumnProperties[] cps = getColumns();
+        for (ColumnProperties cp : cps) {
+            String cdn = cp.getDisplayName();
+            if (cdn.equalsIgnoreCase(name)) {
+                return cp;
+            }
+        }
+        for (ColumnProperties cp : cps) {
+            String ca = cp.getAbbreviation();
+            if ((ca != null) && ca.equalsIgnoreCase(name)) {
+                return cp;
             }
         }
         return null;
@@ -866,6 +883,20 @@ public class TableProperties {
         int ra = db.update(DB_TABLENAME, values, ID_WHERE_SQL, whereArgs);
         Log.d("TP", "rows updated:" + ra);
         Log.d("TP", "values:" + values.toString());
+    }
+    
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof TableProperties)) {
+            return false;
+        }
+        TableProperties other = (TableProperties) obj;
+        return tableId.equals(other.tableId);
+    }
+    
+    @Override
+    public int hashCode() {
+        return tableId.hashCode();
     }
     
     static String getTableCreateSql() {
