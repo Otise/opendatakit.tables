@@ -31,8 +31,10 @@ public class TableProperties {
     private static final String DB_SORT_COLUMN = "sortCol";
     private static final String DB_READ_SECURITY_TABLE_ID = "readAccessTid";
     private static final String DB_WRITE_SECURITY_TABLE_ID = "writeAccessTid";
-    private static final String DB_SYNC_DATA_ETAG = "syncDataEtag";
+    private static final String DB_SYNC_TAG = "syncModNum";
     private static final String DB_LAST_SYNC_TIME = "lastSyncTime";
+    private static final String DB_OV_VIEW_SETTINGS = "ovViewSettings";
+    private static final String DB_CO_VIEW_SETTINGS = "coViewSettings";
     private static final String DB_DETAIL_VIEW_FILE = "detailViewFile";
     private static final String DB_SUM_DISPLAY_FORMAT = "summaryDisplayFormat";
     private static final String DB_SYNC_STATE = "syncState";
@@ -51,6 +53,8 @@ public class TableProperties {
         "readAccessTid";
     private static final String JSON_KEY_WRITE_SECURITY_TABLE_ID =
         "writeAccessTid";
+    private static final String JSON_KEY_OV_VIEW_SETTINGS = "ovViewSettings";
+    private static final String JSON_KEY_CO_VIEW_SETTINGS = "coViewSettings";
     private static final String JSON_KEY_DETAIL_VIEW_FILE = "detailViewFile";
     private static final String JSON_KEY_SUM_DISPLAY_FORMAT =
         "summaryDisplayFormat";
@@ -71,8 +75,10 @@ public class TableProperties {
         DB_SORT_COLUMN,
         DB_READ_SECURITY_TABLE_ID,
         DB_WRITE_SECURITY_TABLE_ID,
-        DB_SYNC_DATA_ETAG,
+        DB_SYNC_TAG,
         DB_LAST_SYNC_TIME,
+        DB_OV_VIEW_SETTINGS,
+        DB_CO_VIEW_SETTINGS,
         DB_DETAIL_VIEW_FILE,
         DB_SUM_DISPLAY_FORMAT,
         DB_SYNC_STATE,
@@ -84,6 +90,14 @@ public class TableProperties {
         public static final int SECURITY = 1;
         public static final int SHORTCUT = 2;
         private TableType() {}
+    }
+    
+    public class ViewType {
+        public static final int TABLE = 0;
+        public static final int LIST = 1;
+        public static final int LINE_GRAPH = 2;
+        public static final int COUNT = 3;
+        private ViewType() {}
     }
     
     private final DbHelper dbh;
@@ -99,8 +113,12 @@ public class TableProperties {
     private String sortColumn;
     private String readSecurityTableId;
     private String writeSecurityTableId;
-    private String syncDataEtag;
+    private int syncTag;
     private String lastSyncTime;
+    private int overviewViewType;
+    private String[] overviewViewSettings;
+    private int collectionViewType;
+    private String[] collectionViewSettings;
     private String detailViewFilename;
     private String sumDisplayFormat;
     private int syncState;
@@ -110,7 +128,9 @@ public class TableProperties {
             String displayName, int tableType, String[] columnOrder,
             String[] primeColumns, String sortColumn,
             String readSecurityTableId, String writeSecurityTableId,
-            String syncDataEtag, String lastSyncTime,
+            int syncTag, String lastSyncTime,
+            int overviewViewType, String[] overviewViewSettings,
+            int collectionViewType, String[] collectionViewSettings,
             String detailViewFilename, String sumDisplayFormat, int syncState,
             int transactioning) {
         this.dbh = dbh;
@@ -125,8 +145,12 @@ public class TableProperties {
         this.sortColumn = sortColumn;
         this.readSecurityTableId = readSecurityTableId;
         this.writeSecurityTableId = writeSecurityTableId;
-        this.syncDataEtag = syncDataEtag;
+        this.syncTag = syncTag;
         this.lastSyncTime = lastSyncTime;
+        this.overviewViewType = overviewViewType;
+        this.overviewViewSettings = overviewViewSettings;
+        this.collectionViewType = collectionViewType;
+        this.collectionViewSettings = collectionViewSettings;
         this.detailViewFilename = detailViewFilename;
         this.sumDisplayFormat = sumDisplayFormat;
         this.syncState = syncState;
@@ -136,16 +160,12 @@ public class TableProperties {
     public static TableProperties getTablePropertiesForTable(DbHelper dbh,
             String tableId) {
         TableProperties[] res = queryForTableProperties(dbh, ID_WHERE_SQL,
-                new String[] {tableId}, true);
+                new String[] {tableId});
         return res[0];
     }
     
     public static TableProperties[] getTablePropertiesForAll(DbHelper dbh) {
         return queryForTableProperties(dbh, null, null);
-    }
-    
-    public static TableProperties[] getTablePropertiesForDeleting(DbHelper dbh) {
-    	return queryForTableProperties(dbh, null, null, true);
     }
     
     public static TableProperties[] getTablePropertiesForDataTables(DbHelper dbh) {
@@ -165,64 +185,69 @@ public class TableProperties {
                 new String[] { String.valueOf(TableType.SHORTCUT) });
     }
     
-	private static TableProperties[] queryForTableProperties(DbHelper dbh,
-			String where, String[] whereArgs) {
-		return queryForTableProperties(dbh, where, whereArgs, false);
-	}
-
-	private static TableProperties[] queryForTableProperties(DbHelper dbh,
-			String where, String[] whereArgs, boolean includeDeleting) {
-		if (!includeDeleting) {
-			where = (where == null) ? (DB_SYNC_STATE + " != " + SyncUtil.State.DELETING)
-					: (where + " AND " + DB_SYNC_STATE + " != " + SyncUtil.State.DELETING);
-		}
-		SQLiteDatabase db = dbh.getReadableDatabase();
-		Cursor c = db.query(DB_TABLENAME, INIT_COLUMNS, where, whereArgs, null,
-				null, null);
-		TableProperties[] tps = new TableProperties[c.getCount()];
-		int tableIdIndex = c.getColumnIndex(DB_TABLE_ID);
-		int dbtnIndex = c.getColumnIndexOrThrow(DB_DB_TABLE_NAME);
-		int displayNameIndex = c.getColumnIndexOrThrow(DB_DISPLAY_NAME);
-		int tableTypeIndex = c.getColumnIndexOrThrow(DB_TABLE_TYPE);
-		int columnOrderIndex = c.getColumnIndexOrThrow(DB_COLUMN_ORDER);
-		int primeColumnsIndex = c.getColumnIndexOrThrow(DB_PRIME_COLUMNS);
-		int sortColumnIndex = c.getColumnIndexOrThrow(DB_SORT_COLUMN);
-		int rsTableId = c.getColumnIndexOrThrow(DB_READ_SECURITY_TABLE_ID);
-		int wsTableId = c.getColumnIndexOrThrow(DB_WRITE_SECURITY_TABLE_ID);
-		int syncDataEtagIndex = c.getColumnIndexOrThrow(DB_SYNC_DATA_ETAG);
-		int lastSyncTimeIndex = c.getColumnIndexOrThrow(DB_LAST_SYNC_TIME);
-		int detailViewFileIndex = c.getColumnIndexOrThrow(DB_DETAIL_VIEW_FILE);
-		int sumDisplayFormatIndex = c
-				.getColumnIndexOrThrow(DB_SUM_DISPLAY_FORMAT);
-		int syncStateIndex = c.getColumnIndexOrThrow(DB_SYNC_STATE);
-		int transactioningIndex = c.getColumnIndexOrThrow(DB_TRANSACTIONING);
-
-		int i = 0;
-		c.moveToFirst();
-		while (i < tps.length) {
-			String columnOrderValue = c.getString(columnOrderIndex);
-			String[] columnOrder = (columnOrderValue.length() == 0) ? new String[] {}
-					: columnOrderValue.split("/");
-			String primeOrderValue = c.getString(primeColumnsIndex);
-			String[] primeList = (primeOrderValue.length() == 0) ? new String[] {}
-					: primeOrderValue.split("/");
-			tps[i] = new TableProperties(dbh, c.getString(tableIdIndex),
-					c.getString(dbtnIndex), c.getString(displayNameIndex),
-					c.getInt(tableTypeIndex), columnOrder, primeList,
-					c.getString(sortColumnIndex), c.getString(rsTableId),
-					c.getString(wsTableId), c.getString(syncDataEtagIndex),
-					c.getString(lastSyncTimeIndex),
-					c.getString(detailViewFileIndex),
-					c.getString(sumDisplayFormatIndex),
-					c.getInt(syncStateIndex), c.getInt(transactioningIndex));
-			i++;
-			c.moveToNext();
-		}
-		c.close();
-		db.close();
-		return tps;
-	}
-   
+    private static TableProperties[] queryForTableProperties(DbHelper dbh,
+            String where, String[] whereArgs) {
+        where = (where == null) ?
+                (DB_SYNC_STATE + " != " + SyncUtil.State.DELETING) :
+                (where + " AND " + DB_SYNC_STATE + " != " +
+                        SyncUtil.State.DELETING);
+        SQLiteDatabase db = dbh.getReadableDatabase();
+        Cursor c = db.query(DB_TABLENAME, INIT_COLUMNS, where, whereArgs, null,
+                null, null);
+        TableProperties[] tps = new TableProperties[c.getCount()];
+        int tableIdIndex = c.getColumnIndex(DB_TABLE_ID);
+        int dbtnIndex = c.getColumnIndexOrThrow(DB_DB_TABLE_NAME);
+        int displayNameIndex = c.getColumnIndexOrThrow(DB_DISPLAY_NAME);
+        int tableTypeIndex = c.getColumnIndexOrThrow(DB_TABLE_TYPE);
+        int columnOrderIndex = c.getColumnIndexOrThrow(DB_COLUMN_ORDER);
+        int primeColumnsIndex = c.getColumnIndexOrThrow(DB_PRIME_COLUMNS);
+        int sortColumnIndex = c.getColumnIndexOrThrow(DB_SORT_COLUMN);
+        int rsTableId = c.getColumnIndexOrThrow(DB_READ_SECURITY_TABLE_ID);
+        int wsTableId = c.getColumnIndexOrThrow(DB_WRITE_SECURITY_TABLE_ID);
+        int syncModNumIndex = c.getColumnIndexOrThrow(
+                DB_SYNC_TAG);
+        int lastSyncTimeIndex = c.getColumnIndexOrThrow(DB_LAST_SYNC_TIME);
+        int ovViewSettingsIndex = c.getColumnIndexOrThrow(DB_OV_VIEW_SETTINGS);
+        int coViewSettingsIndex = c.getColumnIndexOrThrow(DB_CO_VIEW_SETTINGS);
+        int detailViewFileIndex = c.getColumnIndexOrThrow(DB_DETAIL_VIEW_FILE);
+        int sumDisplayFormatIndex = c.getColumnIndexOrThrow(
+                DB_SUM_DISPLAY_FORMAT);
+        int syncStateIndex = c.getColumnIndexOrThrow(DB_SYNC_STATE);
+        int transactioningIndex = c.getColumnIndexOrThrow(DB_TRANSACTIONING);
+        
+        int i = 0;
+        c.moveToFirst();
+        while (i < tps.length) {
+            String columnOrderValue = c.getString(columnOrderIndex);
+            String[] columnOrder = (columnOrderValue.length() == 0) ?
+                new String[] {} : columnOrderValue.split("/");
+            String primeOrderValue = c.getString(primeColumnsIndex);
+            String[] primeList = (primeOrderValue.length() == 0) ?
+                new String[] {} : primeOrderValue.split("/");
+            String ovSettingsDbString = c.getString(ovViewSettingsIndex);
+            String coSettingsDbString = c.getString(coViewSettingsIndex);
+            tps[i] = new TableProperties(dbh, c.getString(tableIdIndex),
+                    c.getString(dbtnIndex), c.getString(displayNameIndex),
+                    c.getInt(tableTypeIndex), columnOrder, primeList,
+                    c.getString(sortColumnIndex), c.getString(rsTableId),
+                    c.getString(wsTableId), c.getInt(syncModNumIndex),
+                    c.getString(lastSyncTimeIndex),
+                    getViewType(ovSettingsDbString),
+                    getViewSettings(ovSettingsDbString),
+                    getViewType(coSettingsDbString),
+                    getViewSettings(coSettingsDbString),
+                    c.getString(detailViewFileIndex),
+                    c.getString(sumDisplayFormatIndex),
+                    c.getInt(syncStateIndex),
+                    c.getInt(transactioningIndex));
+            i++;
+            c.moveToNext();
+        }
+        c.close();
+        db.close();
+        return tps;
+    }
+    
     public static String createDbTableName(DbHelper dbh, String displayName) {
         TableProperties[] allProps = getTablePropertiesForAll(dbh);
         String baseName = displayName.replace(' ', '_');
@@ -262,8 +287,10 @@ public class TableProperties {
         values.putNull(DB_SORT_COLUMN);
         values.putNull(DB_READ_SECURITY_TABLE_ID);
         values.putNull(DB_WRITE_SECURITY_TABLE_ID);
-        values.put(DB_SYNC_DATA_ETAG, -1);
+        values.put(DB_SYNC_TAG, -1);
         values.put(DB_LAST_SYNC_TIME, -1);
+        values.put(DB_OV_VIEW_SETTINGS, String.valueOf(ViewType.TABLE));
+        values.put(DB_CO_VIEW_SETTINGS, String.valueOf(ViewType.TABLE));
         values.putNull(DB_DETAIL_VIEW_FILE);
         values.putNull(DB_SUM_DISPLAY_FORMAT);
         values.put(DB_SYNC_STATE, SyncUtil.State.INSERTING);
@@ -272,8 +299,9 @@ public class TableProperties {
         db.beginTransaction();
         TableProperties tp = new TableProperties(dbh, id, dbTableName,
                 displayName, tableType, new String[0], new String[0], null,
-                null, null, null, null, null, null, SyncUtil.State.INSERTING,
-                SyncUtil.Transactioning.FALSE);
+                null, null, -1, null, ViewType.TABLE, new String[0],
+                ViewType.TABLE, new String[0], null, null,
+                SyncUtil.State.INSERTING, SyncUtil.Transactioning.FALSE);
         long result = db.insert(DB_TABLENAME, null, values);
         Log.d("TP", "row id=" + result);
         if (result < 0) {
@@ -648,6 +676,9 @@ public class TableProperties {
      * no sort column)
      */
     public void setSortColumn(String sortColumn) {
+        if ((sortColumn != null) && (sortColumn.length() == 0)) {
+            sortColumn = null;
+        }
         setStringProperty(DB_SORT_COLUMN, sortColumn);
         this.sortColumn = sortColumn;
     }
@@ -687,24 +718,25 @@ public class TableProperties {
     }
     
     /**
-     * @return the sync data etag (or null if the table has never been
+     * @return the sync sync tag (or null if the table has never been
      * synchronized)
      */
-    public String getSyncDataEtag() {
-        return syncDataEtag;
+    public int getSyncTag() {
+        return syncTag;
     }
     
     /**
-     * Sets the table's sync data etag.
-     * @param dataEtag the new data etag
+     * Sets the table's sync sync tag.
+     * @param syncTag the new sync tag
      */
-    public void setSyncDataEtag(String dataEtag) {
-        setStringProperty(DB_SYNC_DATA_ETAG, dataEtag);
-        this.syncDataEtag = dataEtag;
+    public void setSyncTag(int syncTag) {
+        setIntProperty(DB_SYNC_TAG, syncTag);
+        this.syncTag = syncTag;
     }
     
     /**
-     * @return the last synchronization time (in the format of {@link DataUtil#getNowInDbFormat()}.
+     * @return the last synchronization time (in the format of
+     * {@link DataUtil#getNowInDbFormat()}.
      */
     public String getLastSyncTime() {
         return lastSyncTime;
@@ -712,7 +744,8 @@ public class TableProperties {
     
     /**
      * Sets the table's last synchronization time.
-     * @param time the new synchronization time (in the format of {@link DataUtil#getNowInDbFormat()}).
+     * @param time the new synchronization time (in the format of
+     * {@link DataUtil#getNowInDbFormat()}).
      */
     public void setLastSyncTime(String time) {
         setStringProperty(DB_LAST_SYNC_TIME, time);
@@ -733,6 +766,74 @@ public class TableProperties {
     public void setDetailViewFilename(String filename) {
         setStringProperty(DB_DETAIL_VIEW_FILE, filename);
         this.detailViewFilename = filename;
+    }
+    
+    /**
+     * @return the overview view type
+     */
+    public int getOverviewViewType() {
+        return overviewViewType;
+    }
+    
+    /**
+     * Sets the overview view type.
+     * @param viewType the new overview view type
+     */
+    public void setOverviewViewType(int viewType) {
+        setStringProperty(DB_OV_VIEW_SETTINGS, formViewSettingsDbString(
+                viewType, overviewViewSettings));
+        overviewViewType = viewType;
+    }
+    
+    /**
+     * @return the overview view settings
+     */
+    public String[] getOverviewViewSettings() {
+        return overviewViewSettings;
+    }
+    
+    /**
+     * Sets the overview view settings.
+     * @param settings the new overview view settings
+     */
+    public void setOverviewViewSettings(String[] settings) {
+        setStringProperty(DB_OV_VIEW_SETTINGS, formViewSettingsDbString(
+                overviewViewType, settings));
+        overviewViewSettings = settings;
+    }
+    
+    /**
+     * @return the collection view type
+     */
+    public int getCollectionViewType() {
+        return collectionViewType;
+    }
+    
+    /**
+     * Sets the collection view type.
+     * @param viewType the new collection view type
+     */
+    public void setCollectionViewType(int viewType) {
+        setStringProperty(DB_CO_VIEW_SETTINGS, formViewSettingsDbString(
+                viewType, collectionViewSettings));
+        collectionViewType = viewType;
+    }
+    
+    /**
+     * @return the collection view settings
+     */
+    public String[] getCollectionViewSettings() {
+        return collectionViewSettings;
+    }
+    
+    /**
+     * Sets the collection view settings.
+     * @param settings the new collection view settings
+     */
+    public void setCollectionViewSettings(String[] settings) {
+        setStringProperty(DB_CO_VIEW_SETTINGS, formViewSettingsDbString(
+                collectionViewType, settings));
+        collectionViewSettings = settings;
     }
     
     /**
@@ -813,6 +914,10 @@ public class TableProperties {
             jo.put(JSON_KEY_SORT_COLUMN, sortColumn);
             jo.put(JSON_KEY_READ_SECURITY_TABLE_ID, readSecurityTableId);
             jo.put(JSON_KEY_WRITE_SECURITY_TABLE_ID, writeSecurityTableId);
+            jo.put(JSON_KEY_OV_VIEW_SETTINGS, formViewSettingsDbString(
+                    overviewViewType, overviewViewSettings));
+            jo.put(JSON_KEY_CO_VIEW_SETTINGS, formViewSettingsDbString(
+                    collectionViewType, collectionViewSettings));
             jo.put(JSON_KEY_DETAIL_VIEW_FILE, detailViewFilename);
             jo.put(JSON_KEY_SUM_DISPLAY_FORMAT, sumDisplayFormat);
         } catch(JSONException e) {
@@ -823,6 +928,7 @@ public class TableProperties {
     }
     
     public void setFromJson(String json) {
+        getColumns();
         try {
             JSONObject jo = new JSONObject(json);
             JSONArray colOrderJo = jo.getJSONArray(JSON_KEY_COLUMN_ORDER);
@@ -843,6 +949,16 @@ public class TableProperties {
                     JSON_KEY_READ_SECURITY_TABLE_ID));
             setWriteSecurityTableId(jo.optString(
                     JSON_KEY_WRITE_SECURITY_TABLE_ID));
+            if (jo.has(JSON_KEY_OV_VIEW_SETTINGS)) {
+                String dbString = jo.getString(DB_OV_VIEW_SETTINGS);
+                setOverviewViewType(getViewType(dbString));
+                setOverviewViewSettings(getViewSettings(dbString));
+            }
+            if (jo.has(JSON_KEY_CO_VIEW_SETTINGS)) {
+                String dbString = jo.getString(DB_CO_VIEW_SETTINGS);
+                setCollectionViewType(getViewType(dbString));
+                setCollectionViewSettings(getViewSettings(dbString));
+            }
             setDetailViewFilename(jo.optString(JSON_KEY_DETAIL_VIEW_FILE));
             setSummaryDisplayFormat(jo.optString(JSON_KEY_SUM_DISPLAY_FORMAT));
             Set<String> columnsToDelete = new HashSet<String>();
@@ -850,7 +966,7 @@ public class TableProperties {
                 columnsToDelete.add(cdn);
             }
             JSONArray colJArr = jo.getJSONArray(JSON_KEY_COLUMNS);
-            for (int i = 0; i < colJArr.length(); i++) {
+            for (int i = 0; i < colOrder.length; i++) {
                 JSONObject colJo = colJArr.getJSONObject(i);
                 ColumnProperties cp = getColumnByDbName(colOrder[i]);
                 if (cp == null) {
@@ -892,6 +1008,27 @@ public class TableProperties {
         Log.d("TP", "values:" + values.toString());
     }
     
+    private static int getViewType(String dbString) {
+        return Integer.parseInt(dbString.split("/")[0]);
+    }
+    
+    private static String[] getViewSettings(String dbString) {
+        String[] split = dbString.split("/");
+        String[] settings = new String[split.length - 1];
+        for (int i = 1; i < split.length; i++) {
+            settings[i - 1] = split[i];
+        }
+        return settings;
+    }
+    
+    private String formViewSettingsDbString(int viewType, String[] settings) {
+        StringBuilder sb = new StringBuilder(viewType);
+        for (String setting : settings) {
+            sb.append("/" + setting);
+        }
+        return sb.toString();
+    }
+    
     @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof TableProperties)) {
@@ -917,8 +1054,10 @@ public class TableProperties {
                 ", " + DB_SORT_COLUMN + " TEXT" +
                 ", " + DB_READ_SECURITY_TABLE_ID + " TEXT" +
                 ", " + DB_WRITE_SECURITY_TABLE_ID + " TEXT" +
-                ", " + DB_SYNC_DATA_ETAG + " TEXT" +
+                ", " + DB_SYNC_TAG + " INTEGER NOT NULL" +
                 ", " + DB_LAST_SYNC_TIME + " INTEGER NOT NULL" +
+                ", " + DB_OV_VIEW_SETTINGS + " TEXT" +
+                ", " + DB_CO_VIEW_SETTINGS + " TEXT" +
                 ", " + DB_DETAIL_VIEW_FILE + " TEXT" +
                 ", " + DB_SUM_DISPLAY_FORMAT + " TEXT" +
                 ", " + DB_SYNC_STATE + " INTEGER NOT NULL" +
