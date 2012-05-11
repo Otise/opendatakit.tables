@@ -1,0 +1,4 @@
+^bin
+^tests/bin
+^gen
+tests/.classpath
