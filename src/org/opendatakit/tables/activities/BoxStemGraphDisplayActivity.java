@@ -80,7 +80,7 @@ public class BoxStemGraphDisplayActivity extends Activity
         table = c.getDbTable().getUserTable(query);
         View view = buildView();
         c.setDisplayView(view);
-        setContentView(c.getWrapperView());
+        setContentView(c.getContainerView());
     }
     
     private View buildView() {
@@ -189,14 +189,6 @@ public class BoxStemGraphDisplayActivity extends Activity
     @Override
     public void onSearch() {
         init();
-    }
-    
-    @Override
-    public void onAddRow() {
-        Intent intent = c.getIntentForOdkCollectAddRow();
-        if (intent != null) {
-            startActivityForResult(intent, RCODE_ODKCOLLECT_ADD_ROW);
-        }
     }
     
     private class SettingsDialog extends AlertDialog {

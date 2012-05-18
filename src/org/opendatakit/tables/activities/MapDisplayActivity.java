@@ -87,7 +87,7 @@ public class MapDisplayActivity extends MapActivity
         mv.setBuiltInZoomControls(true);
         mapWrapper.addView(mv);
         c.setDisplayView(mapWrapper);
-        setContentView(c.getWrapperView());
+        setContentView(c.getContainerView());
         init();
     }
     
@@ -178,14 +178,6 @@ public class MapDisplayActivity extends MapActivity
     public void onSearch() {
         c.recordSearch();
         init();
-    }
-    
-    @Override
-    public void onAddRow() {
-        Intent intent = c.getIntentForOdkCollectAddRow();
-        if (intent != null) {
-            startActivityForResult(intent, RCODE_ODKCOLLECT_ADD_ROW);
-        }
     }
     
     @Override

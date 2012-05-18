@@ -72,7 +72,7 @@ public class LineGraphDisplayActivity extends Activity
             yValues.add(Double.valueOf(table.getData(i, yIndex)));
         }
         c.setDisplayView(new LineChart(this, xValues, yValues));
-        setContentView(c.getWrapperView());
+        setContentView(c.getContainerView());
     }
     
     @Override
@@ -112,13 +112,5 @@ public class LineGraphDisplayActivity extends Activity
     public void onSearch() {
         c.recordSearch();
         init();
-    }
-    
-    @Override
-    public void onAddRow() {
-        Intent intent = c.getIntentForOdkCollectAddRow();
-        if (intent != null) {
-            startActivityForResult(intent, RCODE_ODKCOLLECT_ADD_ROW);
-        }
     }
 }
