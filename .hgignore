@@ -1,0 +1,8 @@
+^bin
+^tests/bin
+^perftests/bin
+^gen
+tests/.classpath
+perftests/.classpath
+^perftests/dbs
+db\.sql
