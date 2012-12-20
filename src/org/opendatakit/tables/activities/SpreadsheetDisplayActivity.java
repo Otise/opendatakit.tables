@@ -26,6 +26,7 @@ import org.opendatakit.tables.data.DataManager;
 import org.opendatakit.tables.data.DbHelper;
 import org.opendatakit.tables.data.KeyValueStore;
 import org.opendatakit.tables.data.Query;
+import org.opendatakit.tables.data.TableProperties;
 import org.opendatakit.tables.data.UserTable;
 import org.opendatakit.tables.view.SpreadsheetView;
 
@@ -35,6 +36,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.ContextMenu;
 import android.view.MotionEvent;
 import android.view.View;
@@ -86,36 +88,38 @@ public class SpreadsheetDisplayActivity extends SherlockActivity
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+    	
         // remove a title
         setTitle("");
+        
         dm = new DataManager(DbHelper.getDbHelper(this));
         c = new Controller(this, this, getIntent().getExtras());
-    	ActionBar actionBar = getSupportActionBar();
-    	actionBar.setDisplayHomeAsUpEnabled(true);
         init();
     }
     
     @Override
     public void init() {
+      TableProperties tp = c.getTableProperties();
         query = new Query(dm.getAllTableProperties(KeyValueStore.Type.ACTIVE), 
-            c.getTableProperties());
+            tp);
         query.loadFromUserQuery(c.getSearchText());
         table = c.getIsOverview() ?
                 c.getDbTable().getUserOverviewTable(query) :
                 c.getDbTable().getUserTable(query);
         indexedCol = c.getTableViewSettings().getTableIndexedColIndex();
         // setting up the view
-        c.setDisplayView(buildView());
+        c.setDisplayView(buildView(tp));
         setContentView(c.getContainerView());
     }
     
-    private View buildView() {
+    private View buildView(TableProperties tp) {
         if (table.getWidth() == 0) {
             TextView tv = new TextView(this);
             tv.setText("No data.");
             return tv;
         } else {
-            return new SpreadsheetView(this, this, c.getTableViewSettings(),
+            return new SpreadsheetView(this, this, tp, 
+                c.getTableViewSettings(),
                     table, indexedCol, new DisplayPrefs(this,
                             c.getTableProperties().getTableId()));
         }
@@ -395,8 +399,10 @@ public class SpreadsheetDisplayActivity extends SherlockActivity
 	        Context context = SpreadsheetDisplayActivity.this;
 	        TextView valueView = new TextView(context);
 	        valueView.setText(table.getData(cellId));
+	        valueView.setTextColor(Color.parseColor("#000000"));
 	        Button menuButton = new Button(context);
 	        menuButton.setText("M");
+	        menuButton.setTextColor(Color.parseColor("#000000"));
 	        menuButton.setOnClickListener(new View.OnClickListener() {
 	            @Override
 	            public void onClick(View v) {
@@ -478,6 +484,55 @@ public class SpreadsheetDisplayActivity extends SherlockActivity
 	                String value = table.getData(cellId);
 	                c.appendToSearchBoxText(" " + colName + ":" + value);
 	                c.removeOverlay();
+	            }
+	            return true;
+	        } else {
+	            return false;
+	        }
+	    }
+	}
+    
+    private class DragCell extends LinearLayout {
+	    
+	    private final int cellId;
+	    private int lastDownX;
+	    private int lastDownY;
+	    
+	    public DragCell(int cellId) {
+	        super(SpreadsheetDisplayActivity.this);
+	        this.cellId = cellId;
+	        Context context = SpreadsheetDisplayActivity.this;
+	        TextView valueView = new TextView(context);
+	        valueView.setText(table.getData(cellId));
+	        
+	        setBackgroundColor(Color.TRANSPARENT);
+	        addView(valueView);
+	        lastDownX = 0;
+	        lastDownY = 0;
+	    }
+	    
+	    @Override
+	    public boolean onTouchEvent(MotionEvent event) {
+	        if (event.getAction() == MotionEvent.ACTION_DOWN) {
+	            lastDownX = (Float.valueOf(event.getX())).intValue();
+	            lastDownY = (Float.valueOf(event.getY())).intValue();
+	            return true;
+	        } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
+	            int x = (Float.valueOf(event.getRawX())).intValue();
+	            int y = (Float.valueOf(event.getRawY())).intValue();
+	            c.setOverlayLocation(x - lastDownX, y - lastDownY);
+	            return true;
+	        } else if (event.getAction() == MotionEvent.ACTION_UP) {
+	            int x = (Float.valueOf(event.getRawX())).intValue();
+	            int y = (Float.valueOf(event.getRawY())).intValue();
+	            if (c.isInSearchBox(x, y)) {
+	                String colName = c.getTableProperties().getColumns()
+	                        [cellId % table.getWidth()].getDisplayName();
+	                String value = table.getData(cellId);
+	                c.appendToSearchBoxText(" " + colName + ":" + value);
+	                c.removeOverlay();
+	            } else {
+	            	c.removeOverlay();
 	            }
 	            return true;
 	        } else {
