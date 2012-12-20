@@ -31,6 +31,7 @@ import org.codehaus.jackson.annotate.JsonMethod;
 import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.json.JSONException;
 import org.opendatakit.aggregate.odktables.entity.OdkTablesKeyValueStoreEntry;
 import org.opendatakit.tables.Activity.util.SecurityUtil;
 import org.opendatakit.tables.Activity.util.ShortcutUtil;
@@ -1491,6 +1492,10 @@ public class TableProperties {
     setStringProperty(TableDefinitions.DB_LAST_SYNC_TIME, time);
     this.lastSyncTime = time;
   }
+  
+  public KeyValueStore.Type getBackingStoreType() {
+    return this.backingStore;
+  }
 
   /**
    * @return the overview view settings
@@ -1507,6 +1512,25 @@ public class TableProperties {
    */
   void setOverviewViewSettings(String dbString) {
     setStringProperty(KEY_OV_VIEW_SETTINGS, dbString);
+//    Map<String,Object> dbObject;
+//    try {
+//      dbObject = mapper.readValue(dbString, Map.class);
+//      this.overviewViewSettings.setFromJsonObject(dbObject);
+//    } catch (JSONException e) {
+//      e.printStackTrace();
+//      throw new IllegalStateException("encounted problem setting table view " +
+//      		"settings from json");
+//     } catch (JsonParseException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   } catch (JsonMappingException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   } catch (IOException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   }
+    
   }
 
   /**
@@ -1524,6 +1548,24 @@ public class TableProperties {
    */
   void setCollectionViewSettings(String dbString) {
     setStringProperty(KEY_CO_VIEW_SETTINGS, dbString);
+//    Map<String,Object> dbObject;
+//    try {
+//      dbObject = mapper.readValue(dbString, Map.class);
+//      this.collectionViewSettings.setFromJsonObject(dbObject);
+//    } catch (JSONException e) {
+//      e.printStackTrace();
+//      throw new IllegalStateException("encounted problem setting table view " +
+//            "settings from json");
+//     } catch (JsonParseException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   } catch (JsonMappingException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   } catch (IOException e) {
+//      e.printStackTrace();
+//      throw new IllegalArgumentException("invalid db value: " + dbString);
+//   }
   }
 
   /**
@@ -1531,6 +1573,7 @@ public class TableProperties {
    */
   public String getDetailViewFilename() {
     return detailViewFilename;
+
   }
 
   /**

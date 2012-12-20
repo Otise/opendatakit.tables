@@ -19,11 +19,13 @@ import java.util.HashMap;
 import java.util.Map;
 
 import org.opendatakit.tables.view.custom.CustomDetailView;
+import org.opendatakit.tables.view.custom.CustomTableView;
 
 import android.os.Bundle;
 
 import com.actionbarsherlock.app.SherlockActivity;
 import com.actionbarsherlock.view.Menu;
+import com.actionbarsherlock.view.MenuItem;
 
 
 public class DetailDisplayActivity extends SherlockActivity
@@ -59,6 +61,8 @@ public class DetailDisplayActivity extends SherlockActivity
     
     @Override
     public void init() {
+        // change the info bar text
+        c.setInfoBarText(c.getInfoBarText() + " (Detailed)");
         data = new HashMap<String, String>();
         for (int i = 0; i < keys.length; i++) {
             data.put(keys[i], values[i]);
@@ -83,5 +87,10 @@ public class DetailDisplayActivity extends SherlockActivity
     public boolean onCreateOptionsMenu(Menu menu) {
         c.buildOptionsMenu(menu, false);
         return true;
+    }
+    
+    @Override
+    public boolean onMenuItemSelected(int featureId, MenuItem item) {
+        return c.handleMenuItemSelection(item);
     }
 }

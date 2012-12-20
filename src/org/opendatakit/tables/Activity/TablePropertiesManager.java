@@ -99,7 +99,7 @@ public class TablePropertiesManager extends PreferenceActivity {
         dbh = DbHelper.getDbHelper(this);
         tp = TableProperties.getTablePropertiesForTable(dbh, tableId,
             KeyValueStore.Type.ACTIVE);
-        setTitle("ODK Tables > Table Manager > " + tp.getDisplayName());
+        setTitle("Table Manager > " + tp.getDisplayName());
         init();
     }
     
@@ -250,8 +250,7 @@ public class TablePropertiesManager extends PreferenceActivity {
             public boolean onPreferenceChange(Preference preference,
                     Object newValue) {
                 tp.setDisplayName((String) newValue);
-                setTitle("ODK Tables > Table Manager > " +
-                        tp.getDisplayName());
+                setTitle("Table Manager > " + tp.getDisplayName());
                 init();
                 return false;
             }
@@ -556,7 +555,7 @@ public class TablePropertiesManager extends PreferenceActivity {
         
         case TableViewSettings.Type.LIST:
             {
-            	// Launches IO File Manager to change the list view file
+            	// June: Launches IO File Manager to change the list view file
             	// (The previous method was to manually enter the filename - see 
             	//  commented out code below)
             	ListViewFileSelectorPreference listFilePref = new ListViewFileSelectorPreference(this);
