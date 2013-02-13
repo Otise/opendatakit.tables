@@ -1,0 +1,12 @@
+^bin
+^tests/bin
+^perftests/bin
+^gen
+tests/.classpath
+perftests/.classpath
+^perftests/dbs
+syntax: glob
+.settings/org.eclipse.jdt.core.prefs
+db\.sql
+perftests/gen/org/opendatakit/tables/test/BuildConfig\.java
+perftests/project\.properties
