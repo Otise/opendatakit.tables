@@ -35,6 +35,7 @@ import org.opendatakit.tables.data.KeyValueStoreManager;
 import org.opendatakit.tables.data.TableProperties;
 import org.opendatakit.tables.data.TableType;
 import org.opendatakit.tables.data.TableViewType;
+import org.opendatakit.tables.lib.EditFormDialogPreference;
 import org.opendatakit.tables.view.custom.CustomDetailView;
 
 import android.app.AlertDialog;
@@ -44,6 +45,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.content.res.Resources;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.os.Bundle;
@@ -55,6 +57,7 @@ import android.preference.Preference.OnPreferenceClickListener;
 import android.preference.PreferenceActivity;
 import android.preference.PreferenceCategory;
 import android.preference.PreferenceScreen;
+import android.util.AttributeSet;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -69,6 +72,8 @@ public class TablePropertiesManager extends PreferenceActivity {
   private static final String TAG = "TablePropertiesManager";
 
     public static final String INTENT_KEY_TABLE_ID = "tableId";
+    
+    private static final String TITLE_EDIT_FORM = "Edit Default Form";
 
     // these ints are used when selecting/changing the view files
     private static final int RC_DETAIL_VIEW_FILE = 0;
@@ -341,6 +346,33 @@ public class TablePropertiesManager extends PreferenceActivity {
                     }
         });
         displayCat.addPreference(detailViewPref);
+        
+        // Now let's add the pref for the Form.
+        EditFormDialogPreference formPref = 
+            new EditFormDialogPreference(this, tp);
+        displayCat.addPreference(formPref);
+        formPref.setTitle(TITLE_EDIT_FORM);
+        formPref.setDialogTitle(TITLE_EDIT_FORM);
+        
+        Preference rowColorRulePrefs = new Preference(this);
+        rowColorRulePrefs.setTitle("Edit Table Color Rules");
+        rowColorRulePrefs.setOnPreferenceClickListener(
+            new OnPreferenceClickListener() {
+
+          @Override
+          public boolean onPreferenceClick(Preference preference) {
+            Intent rowColorRuleManagerIntent =
+                new Intent(TablePropertiesManager.this,
+                    RowColorRuleManagerActivity.class);
+            rowColorRuleManagerIntent.putExtra(
+                ListViewManager.INTENT_KEY_TABLE_ID,
+                tp.getTableId());
+            startActivity(rowColorRuleManagerIntent);
+            return true;
+          }
+
+        });
+        displayCat.addPreference(rowColorRulePrefs);
 
         // security category
 
