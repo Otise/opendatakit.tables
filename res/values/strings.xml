@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<string name="app_name">ODK Tables</string>
+	<string name="ok">OK</string>
+	<string name="cancel">Cancel</string>
+	<string name="set">Set</string>
+	<string name="xaxis">X-Axis</string>
+	<string name="yaxis">Y-Axis</string>
+	<string name="button_search">Search</string>
+	<string name="box_stem_settings_title">Box-Stem Graph Settings</string>
+	<string name="impossible_box_stem">At least one number column is required for box-stem graphs.</string>
+	<!--  authority name for table files -->
+	<string name="table_files_authority">org.opendatakit.tables.tablefilesauthority</string>
+	<!-- For editing ListView things -->
+	<string name="user_defined_listview_name_label">Name</string>
+	<string name="file">File</string>
+	<string name="no_list_view_message">Use + submenu to add a new list view</string>
+	<string name="user_defined_graphview_name_label">Name</string>
+	<string name="app_defined_graphtype_label">Graph Type</string>
+	<!-- For various TableManager things -->
+	<string name="name_of_new_table">Name of New Table</string>
+	<!-- For color rule things -->
+	<string name="comparison_type">Comparison Type</string>
+	<string name="value">Value</string>
+	<string name="text_color">Text Color</string>
+	<string name="background_color">Background Color</string>
+	<string name="column">Column</string>
+	<string name="file_picker_not_found">OI File Manager is missing.\n\nPlease install the OI File Manager application.</string>
+	<string name="no_shortcuts">No Shortcuts Defined</string>
+	<string name="account">Account:</string>
+	<string name="save_settings">Save settings</string>
+	<string name="auth_account">Authorize account</string>
+	<string name="choose_sync_set">Choose set of tables to sync</string>
+	<string name="download_table">Download table from server</string>
+	<string name="sync_now">Sync now</string>
+	<string name="sync_files_now">Sync files now</string>
+	<string name="server_url">Aggregate URL:</string>
+	<string name="default_server_url">http://opendatakit-2.appspot.com</string>
+	<string name="save_all">Save All</string>
+	<string name="next">Next</string>
+	<string name="previous">Previous</string>
+	<string name="save">Save</string>
+	<string name="list_format">List Format</string>
+	<string name="sync_no_tables_ready">There are no tables ready to be synched with the server.</string>
+	<string name="press_to_add_color_rule">Press + to add a color rule</string>
+	<string name="press_to_add_graph">Press + to add a graph.</string>
+	<string name="press_to_add_list_view">Press + to add a list view.</string>
+	<string name="open_new_spreadsheet">Open New Spreadsheet File</string>
+	<string name="no_data">No data</string>
+	<string name="edit">Edit</string>
+	<string name="write_access_control_group">Write Access Control Group:</string>
+	<string name="read_access_control_group">Read Access Control Group:</string>
+	<string name="preferred_view_type">Preferred View Type</string>
+	<string name="sms_shortcut_name">Shortcut Name</string>
+	<string name="sms_shortcut_input">Shortcut Input</string>
+	<string name="sms_shortcut_output">Shortcut Output</string>
+	<string name="multiple_choice_options">Multiple Choice Options</string>
+	<string name="add_choice">Add Choice</string>
+	<string name="no_conflicts">No conflicts.</string>
+	<string name="set">Set</string>
+	<string name="undo">Undo</string>
+	<string name="add_rule">Add Rule</string>
+	<string name="conditional_colors">Conditional Colors: %1$s</string>
+	<string name="ok">OK</string>
+	<string name="pick_foreground_color">Pick a Foreground Color</string>
+	<string name="pick_background_color">Pick a Background Color</string>
+	<string name="unrecognized_rule">Unrecognized Rule</string>
+	<string name="accepted_rule_ops">The accepted operators are: &lt;, &lt;=, =, &gt;, &gt;=</string>
+	<string name="sunday_abbrev">SUN</string>
+	<string name="monday_abbrev">MON</string>
+	<string name="tuesday_abbrev">TUE</string>
+	<string name="wednesday_abbrev">WED</string>
+	<string name="thursday_abbrev">THU</string>
+	<string name="friday_abbrev">FRI</string>
+	<string name="saturday_abbrev">SAT</string>
+	<string name="title_form_id">Form Id</string>
+	<string name="title_root_element">Root Element</string>
+	<string name="configuring_tables">Configuring ODK Tables</string>
+	<string name="processing_file">processing file&#8230;</string>
+	<string name="importing_file">Importing file (%1$d of %2$d): %3$s\n(%4$s)</string>
+	<string name="bad_config_properties_file">bad config.properties file</string>
+	<string name="error">error</string>
+	<string name="config_summary">Configuration Summary:</string>
+	<string name="imported_successfully">- %1$s imported successfully\n\n</string>
+	<string name="imported_with_errors">- %1$s imported with errors\n\n</string>
+	<string name="use_default">Use Default</string>
+	<string name="lat_long_not_set">Latitude or longitude columns are not set!</string>
+	<string name="list_view_file_not_set">List view file is not set!</string>
+	<string name="edit_default_form">Edit Default Form</string>
+	<string name="table_manager_title">Table Manager > %1$s</string>
+	<string name="revert_warning">Revert to default settings? Any modifications you have made will be lost.</string>
+	<string name="yes">Yes</string>
+</resources>
