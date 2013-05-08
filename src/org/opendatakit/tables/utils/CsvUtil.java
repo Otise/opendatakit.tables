@@ -203,8 +203,8 @@ public class CsvUtil {
 	            columns.add(dbName);
               }
             } else {
-              tp = TableProperties.addTable(dbh, dbTableName,
-                  tableName, TableType.data,
+              tp = TableProperties.addTable(dbh, dbTableName, dbTableName,
+                  tableName, TableType.data, 
                   KeyValueStore.Type.ACTIVE);
 
               columns = new ArrayList<String>();
