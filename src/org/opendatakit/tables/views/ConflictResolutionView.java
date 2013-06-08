@@ -140,7 +140,7 @@ public class ConflictResolutionView extends HorizontalScrollView implements
 			data[index][1][i] = table.getValue(index, 1, i);
 		}
 		RowItem ri = new RowItem(context, index);
-		// The wholeData param here is confusing. I'm not sure exactly what the 
+		// The wholeData param here is confusing. I'm not sure exactly what the
 		// conflict table is holding.
 		TabularView tv = null;
 //		TabularView tv = new TabularView(context, this, tp, data[index], data[index],
