@@ -15,15 +15,21 @@
  */
 package org.opendatakit.tables.sync;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.OdkTablesKeyValueStoreEntry;
 import org.opendatakit.tables.R;
 import org.opendatakit.tables.data.ColumnType;
+import org.springframework.http.converter.ResourceHttpMessageConverter;
+import org.springframework.http.converter.StringHttpMessageConverter;
+import org.springframework.web.client.RestTemplate;
 
 import android.content.Context;
+import android.net.Uri;
 import android.util.Log;
-
-import java.util.Comparator;
 
 /**
  * A utility class for common synchronization methods and definitions.
@@ -31,6 +37,8 @@ import java.util.Comparator;
 public class SyncUtil {
 
   public static final String TAG = SyncUtil.class.getSimpleName();
+  
+  private static final String FORWARD_SLASH = "/";
 
   /**
    * <p>
@@ -74,6 +82,46 @@ public class SyncUtil {
 
     private State() {
     }
+  }
+  
+  /**
+   * Get the path to the file server. Should be appended to the uri of the 
+   * aggregate uri. Begins and ends with "/".
+   * @return
+   */
+  public static String getFileServerPath() {
+    return "/odktables/files/";
+  }
+  
+  public static String getFileManifestServerPath() {
+    return "/odktables/filemanifest";
+  }
+  
+  /**
+   * Format a file path to be pushed up to aggregate. Essentially escapes the
+   * string as for an html url, but leaves forward slashes. The path must begin
+   * with a forward slash, as if starting at the root directory.
+   * @return a properly escaped url, with forward slashes remaining.
+   */
+  public static String formatPathForAggregate(String path) {
+    String escaped = Uri.encode(path, "/");
+    return escaped;
+  }
+  
+  /**
+   * Escape a list of paths for aggregate, leaving forward slashes. This 
+   * utility method is equivalent to calling 
+   * {@link SyncUtil#formatPathForAggregate(String)} on every element of the
+   * list.
+   * @param paths
+   * @return
+   */
+  public static List<String> formatPathsForAggregate(List<String> paths) {
+    List<String> escapedPaths = new ArrayList<String>();
+    for (String path : paths) {
+      escapedPaths.add(SyncUtil.formatPathForAggregate(path));
+    }
+    return escapedPaths;
   }
 
   public static boolean intToBool(int i) {
@@ -249,6 +297,45 @@ public class SyncUtil {
     }
 
     return msg.toString();
+  }
+  
+  /**
+   * Get a {@link RestTemplate} for synchronizing files.
+   * @return
+   */
+  public static RestTemplate getRestTemplateForFiles() {
+    // Thanks to this guy for the snippet:
+    // https://github.com/barryku/SpringCloud/blob/master/BoxApp/BoxNetApp/src/com/barryku/android/boxnet/RestUtil.java
+    RestTemplate rt = new RestTemplate();
+    ResourceHttpMessageConverter fileConverter = new ResourceHttpMessageConverter();
+    rt.getMessageConverters().add(fileConverter);
+//    rt.setErrorHandler(new ResponseErrorHandler() {
+//      
+//      @Override
+//      public boolean hasError(ClientHttpResponse resp) throws IOException {
+//        HttpStatus status = resp.getStatusCode();
+//        if (HttpStatus.CREATED.equals(status) 
+//            || HttpStatus.OK.equals(status)) {
+//         return false; 
+//        } else {
+//          Log.e(TAG, "[hasError] response: " + resp.getBody());
+//          return true;
+//        }
+//      }
+//      
+//      @Override
+//      public void handleError(ClientHttpResponse resp) throws IOException {
+//        Log.e(TAG, "[handleError] response body: " + resp.getBody());
+//        throw new HttpClientErrorException(resp.getStatusCode());
+//      }
+//    });
+    return rt;
+  }
+  
+  public static RestTemplate getRestTemplateForString() {
+    RestTemplate rt = new RestTemplate();
+    rt.getMessageConverters().add(new StringHttpMessageConverter());
+    return rt;
   }
 
 
