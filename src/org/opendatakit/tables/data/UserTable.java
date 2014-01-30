@@ -119,7 +119,8 @@ public class UserTable {
     mElementKeyForIndex = elementKeyForIndex;
   }
 
-  public UserTable(Cursor c, TableProperties tableProperties, List<String> userColumnOrder) {
+  public UserTable(Cursor c, TableProperties tableProperties, 
+      List<String> userColumnOrder) {
     buildFormatters();
     mTp = tableProperties;
     List<String> adminColumnOrder = DbTable.getAdminColumns();
@@ -225,10 +226,6 @@ public class UserTable {
     }
   }
 
-  public String getRowId(int rowNum) {
-    return this.mRows.get(rowNum).mRowId;
-  }
-
   public Long getTimestamp(int rowNum) {
     return Long.valueOf(getMetadataByElementKey(rowNum, DataTableColumns.SAVEPOINT_TIMESTAMP));
   }
@@ -245,6 +242,11 @@ public class UserTable {
     return mElementKeyForIndex[colNum];
   }
 
+  /**
+   * Get the index of the element key for the user-defined columns.
+   * @param elementKey
+   * @return null if the column is not found
+   */
   public Integer getColumnIndexOfElementKey(String elementKey) {
     return mDataKeyToIndex.get(elementKey);
   }
@@ -257,6 +259,18 @@ public class UserTable {
 
   public String getData(int rowNum, int colNum) {
     return mRows.get(rowNum).getDataAtIndex(colNum);
+  }
+  
+  /**
+   * True if the table has been grouped by a value. This is referred to in some
+   * places of the code as an "indexed" table, which also and irritatingly
+   * means that a column has been set to "prime". 
+   * @return
+   */
+  public boolean isGroupedBy() {
+    // All this mess of terminology is incredibly confusing and frustrating.
+    // This method comes from CustomView#TableData.
+    return !mTp.getPrimeColumns().isEmpty();
   }
 
   public String getDisplayTextOfData(Context context, int cellNum) {
@@ -337,6 +351,16 @@ public class UserTable {
   public String getMetadataByElementKey(int rowNum, String elementKey) {
     return mRows.get(rowNum).getMetadataAtIndex(mMetadataKeyToIndex.get(elementKey));
   }
+  
+  /**
+   * Return the data or metadata value in the given row by element key.
+   * @param rowNum
+   * @param elementKey
+   * @return
+   */
+  public String getDataByElementKey(int rowNum, String elementKey) {
+    return mRows.get(rowNum).getDataOrMetadataByElementKey(elementKey);
+  }
 
   public String getFooter(int colNum) {
     return footer[colNum];
@@ -400,7 +424,7 @@ public class UserTable {
     return mRows.get(rowNum).getAllMetadata();
   }
 
-  public int getHeight() {
+  public int getNumberOfRows() {
     return this.mRows.size();
   }
 
@@ -486,6 +510,14 @@ public class UserTable {
      */
     public String getMetadataAtIndex(int index) {
       return mMetadata[index];
+    }
+    
+    /**
+     * Return the id of this row.
+     * @return
+     */
+    public String getRowId() {
+      return this.mRowId;
     }
 
     /**
