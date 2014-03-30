@@ -21,6 +21,7 @@ import java.util.List;
 
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.OdkTablesKeyValueStoreEntry;
+import org.opendatakit.aggregate.odktables.rest.entity.PropertiesResource;
 import org.opendatakit.aggregate.odktables.rest.entity.TableDefinitionResource;
 import org.opendatakit.aggregate.odktables.rest.entity.TableProperties;
 import org.opendatakit.aggregate.odktables.rest.entity.TableResource;
@@ -46,12 +47,24 @@ public interface Synchronizer {
 
   /**
    * Discover the current sync state of a given tableId.
+   * This may throw an exception if the table is not found on
+   * the server.
    *
    * @param tableId
    * @return
    * @throws IOException
    */
   public TableResource getTable(String tableId) throws IOException;
+
+  /**
+   * Returns the given tableId resource or null if the resource
+   * does not exist on the server.
+   *
+   * @param tableId
+   * @return
+   * @throws IOException
+   */
+  public TableResource getTableOrNull(String tableId) throws IOException;
 
   /**
    * Discover the schema for a table resource.
@@ -70,9 +83,9 @@ public interface Synchronizer {
    *          the current SyncTag for the table
    * @param cols
    *          a map from column names to column types, see {@link ColumnType}
-   * @return the revised SyncTag for the table (the server may return a new schemaETag)
+   * @return the TableResource for the table (the server may return different SyncTag values)
    */
-  public SyncTag createTable(String tableId, SyncTag currentSyncTag, ArrayList<Column> columns)
+  public TableResource createTable(String tableId, SyncTag currentSyncTag, ArrayList<Column> columns)
       throws IOException;
 
   /**
@@ -86,8 +99,8 @@ public interface Synchronizer {
   /**
    * Sets the table display name and table properties on the server.
    *
-   * @param tableId
-   *          the unique identifier of the table
+   * @param propertiesUri
+   *          the URI to this table's properties on the server
    * @param currentSyncTag
    *          the last value that was stored as the syncTag
    * @return
@@ -95,23 +108,25 @@ public interface Synchronizer {
    *
    * @throws IOException
    */
-  public TableProperties getTableProperties(String tableId, SyncTag currentSyncTag) throws IOException;
+  public PropertiesResource getTablePropertiesResource(String propertiesUri, SyncTag currentSyncTag) throws IOException;
 
 
   /**
    * Sets the table display name and table properties on the server.
    *
-   * @param tableId
-   *          the unique identifier of the table
+   * @param propertiesUri
+   *          the URI to this table's properties on the server
    * @param currentSyncTag
    *          the last value that was stored as the syncTag
+   * @param tableId
+   *          the tableId of this table
    * @param kvsEntries
    *          all the entries in the key value store for this table. Should
    *          be of the server kvs, since this is for synchronization.
    * @return the syncTag of the table
    * @throws IOException
    */
-  public SyncTag setTableProperties(String tableId, SyncTag currentSyncTag,
+  public SyncTag setTablePropertiesResource(String propertiesUri, SyncTag currentSyncTag, String tableId,
                                    ArrayList<OdkTablesKeyValueStoreEntry> kvsEntries) throws IOException;
 
   /**
@@ -123,8 +138,11 @@ public interface Synchronizer {
    *          the last value that was stored as the syncTag, or null if this is
    *          the first synchronization
    * @return an IncomingModification representing the latest state of the table
+   *         on server since the last sync or null if the table does not exist
+   *         on the server.
+   *
    */
-  public IncomingModification getUpdates(String tableId, SyncTag currentSyncTag) throws IOException;
+  public IncomingRowModifications getUpdates(String tableId, SyncTag currentSyncTag) throws IOException;
 
   /**
    * Insert or update the given row in the table on the server.
