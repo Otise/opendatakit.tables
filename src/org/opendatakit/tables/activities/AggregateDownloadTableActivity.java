@@ -21,10 +21,10 @@ import java.util.List;
 
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
+import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.entity.TableResource;
 import org.opendatakit.common.android.data.Preferences;
 import org.opendatakit.common.android.data.TableProperties;
-import org.opendatakit.common.android.provider.SyncState;
 import org.opendatakit.common.android.sync.SyncProcessor;
 import org.opendatakit.common.android.sync.Synchronizer;
 import org.opendatakit.common.android.sync.TableResult;
@@ -312,10 +312,8 @@ public class AggregateDownloadTableActivity extends ListActivity {
       }
 
       tp.setSyncState(tablePresent ? SyncState.inserting : SyncState.rest);
-      // We're going to say DO NOT sync media or nonMedia files, as since we're
-      // downloading the table, there shouldn't be any. If for some crazy
-      // reason there were (e.g. if they were created in the download process),
-      // it shouldn't really matter.
+      // Sync the local media files with the server if the table
+      // existed locally before we attempted downloading it.
 
       processor.synchronizeTable(tp, false, tablePresent);
 

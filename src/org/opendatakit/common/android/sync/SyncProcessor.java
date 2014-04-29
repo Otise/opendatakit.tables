@@ -29,9 +29,13 @@ import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.annotate.JsonAutoDetect.Visibility;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+import org.opendatakit.aggregate.odktables.rest.ConflictType;
+import org.opendatakit.aggregate.odktables.rest.SavepointTypeManipulator;
+import org.opendatakit.aggregate.odktables.rest.SyncState;
 import org.opendatakit.aggregate.odktables.rest.entity.Column;
 import org.opendatakit.aggregate.odktables.rest.entity.OdkTablesKeyValueStoreEntry;
 import org.opendatakit.aggregate.odktables.rest.entity.PropertiesResource;
+import org.opendatakit.aggregate.odktables.rest.entity.Scope;
 import org.opendatakit.aggregate.odktables.rest.entity.TableDefinitionResource;
 import org.opendatakit.aggregate.odktables.rest.entity.TableResource;
 import org.opendatakit.common.android.data.ColumnProperties;
@@ -41,9 +45,7 @@ import org.opendatakit.common.android.data.DbTable;
 import org.opendatakit.common.android.data.TableProperties;
 import org.opendatakit.common.android.data.UserTable;
 import org.opendatakit.common.android.data.UserTable.Row;
-import org.opendatakit.common.android.provider.ConflictType;
 import org.opendatakit.common.android.provider.DataTableColumns;
-import org.opendatakit.common.android.provider.SyncState;
 import org.opendatakit.common.android.sync.TableResult.Status;
 import org.opendatakit.common.android.sync.aggregate.SyncTag;
 import org.opendatakit.common.android.sync.exceptions.SchemaMismatchException;
@@ -139,8 +141,8 @@ public class SyncProcessor {
    * </p>
    */
   public SynchronizationResult synchronize(boolean pushLocalAppLevelFiles,
-                                           boolean pushLocalTableNonMediaFiles,
-                                           boolean syncMediaFiles) {
+                                           boolean pushLocalTableLevelFiles,
+                                           boolean pushLocalInstanceFiles) {
     Log.i(TAG, "entered synchronize()");
     // First we're going to synchronize the app level files.
     try {
@@ -155,8 +157,8 @@ public class SyncProcessor {
     // because we only want to push the default to the server.
     TableProperties[] tps = TableProperties.getTablePropertiesForSynchronizedTables(context, appName);
     for (TableProperties tp : tps) {
-      Log.i(TAG, "synchronizing table " + tp.getDisplayName());
-      synchronizeTable(tp, pushLocalTableNonMediaFiles, syncMediaFiles);
+      Log.i(TAG, "synchronizing table " + tp.getTableId());
+      synchronizeTable(tp, pushLocalTableLevelFiles, pushLocalInstanceFiles);
     }
     return mUserResult;
   }
@@ -180,16 +182,15 @@ public class SyncProcessor {
    *          flag saying whether or not the table is being downloaded for the
    *          first time. Only applies to tables have their sync state set to
    *          {@link SyncState#rest}.
-   * @param pushLocalNonMediaFiles
-   *          true if local non media files should be pushed--e.g. any html
-   *          files on the device should be pushed to the server
-   * @param syncMediaFiles
-   *          if media files should also be synchronized. Media files are
-   *          defined as files that are part of the actual data of a table, e.g.
-   *          pictures that have been collected.
+   * @param pushLocalTableLevelFiles
+   *          true if local table-level files should be pushed up to the server.
+   *          e.g. any html files on the device should be pushed to the server
+   * @param pushLocalInstanceFiles
+   *          if local media files associated with data rows should be pushed
+   *          up to the server. The data files on the server are always pulled down.
    */
   public void synchronizeTable(TableProperties tp,
-                               boolean pushLocalNonMediaFiles, boolean syncMediaFiles) {
+                               boolean pushLocalTableLevelFiles, boolean pushLocalInstanceFiles) {
     // TODO the order of synching should probably be re-arranged so that you
     // first get the table properties and column entries (ie the table definition) and
     // THEN get the row data. This would make it more resilient to network
@@ -215,7 +216,7 @@ public class SyncProcessor {
     boolean success = false;
     // Prepare the tableResult. We'll start it as failure, and only update it
     // if we're successful at the end.
-    TableResult tableResult = new TableResult(tp.getDisplayName(), tp.getTableId());
+    TableResult tableResult = new TableResult(tp.getLocalizedDisplayName(), tp.getTableId());
     beginTableTransaction(tp);
     try {
       switch (tp.getSyncState()) {
@@ -228,7 +229,7 @@ public class SyncProcessor {
         // presume success...
         tableResult.setStatus(Status.SUCCESS);
         success = synchronizeTablePreserving(tp, table, tableResult,
-                          pushLocalNonMediaFiles, syncMediaFiles);
+                          pushLocalTableLevelFiles, pushLocalInstanceFiles);
         break;
       default:
         Log.e(TAG, "got unrecognized syncstate: " + tp.getSyncState());
@@ -275,7 +276,7 @@ public class SyncProcessor {
     // the hadLocalData changes might not strictly be true.
     tableResult.setHadLocalDataChanges(true);
     tableResult.setHadLocalPropertiesChanges(true);
-    Log.i(TAG, "DELETING " + tp.getDisplayName());
+    Log.i(TAG, "DELETING " + tableId);
     boolean success = false;
     try {
       synchronizer.deleteTable(tableId);
@@ -328,13 +329,13 @@ public class SyncProcessor {
    * @return
    */
   private boolean synchronizeTablePreserving(TableProperties tp, DbTable table,
-                                       TableResult tableResult, boolean pushLocalNonMediaFiles,
-                                       boolean syncMediaFiles) {
+                                       TableResult tableResult, boolean pushLocalTableLevelFiles,
+                                       boolean pushLocalInstanceFiles) {
     String tableId = tp.getTableId();
-    Log.i(TAG, "REST " + tp.getDisplayName());
+    Log.i(TAG, "REST " + tableId);
 
     try {
-      synchronizer.syncNonRowDataTableFiles(tp.getTableId(), pushLocalNonMediaFiles);
+      synchronizer.syncNonRowDataTableFiles(tp.getTableId(), pushLocalTableLevelFiles);
     } catch (ResourceAccessException e) {
       resourceAccessException("synchronizeTableRest--nonMediaFiles", tp, e, tableResult);
       Log.e(TAG, "[synchronizeTableRest] error synchronizing table files");
@@ -426,21 +427,17 @@ public class SyncProcessor {
       // And now update that we've pushed our changes to the server.
       tableResult.setPushedLocalData(true);
       // And now try to push up the media files, if necessary.
-      if (syncMediaFiles) {
-        try {
-          Log.d(TAG, "[synchronizeTableRest] synching media files");
-          synchronizer.syncRowDataFiles(tp.getTableId());
-        } catch (ResourceAccessException e) {
-          resourceAccessException("synchronizeTableRest--mediaFiles", tp, e, tableResult);
-          Log.e(TAG, "[synchronizeTableRest] error synchronizing media files");
-          return false;
-        } catch (Exception e) {
-          exception("synchronizeTableRest--mediaFiles", tp, e, tableResult);
-          Log.e(TAG, "[synchronizeTableRest] error synchronizing media files");
-          return false;
-        }
-      } else {
-        Log.d(TAG, "[synchronizeTableRest] NOT synching media files");
+      try {
+        Log.d(TAG, "[synchronizeTableRest] synching media files");
+        synchronizer.syncRowDataFiles(tp.getTableId(), pushLocalInstanceFiles);
+      } catch (ResourceAccessException e) {
+        resourceAccessException("synchronizeTableRest--mediaFiles", tp, e, tableResult);
+        Log.e(TAG, "[synchronizeTableRest] error synchronizing media files");
+        return false;
+      } catch (Exception e) {
+        exception("synchronizeTableRest--mediaFiles", tp, e, tableResult);
+        Log.e(TAG, "[synchronizeTableRest] error synchronizing media files");
+        return false;
       }
       success = true;
     } catch (IOException e) {
@@ -457,7 +454,7 @@ public class SyncProcessor {
   private void resourceAccessException(String method, TableProperties tp,
                                        ResourceAccessException e, TableResult tableResult) {
     Log.e(TAG,
-        String.format("ResourceAccessException in %s for table: %s", method, tp.getDisplayName()),
+        String.format("ResourceAccessException in %s for table: %s", method, tp.getTableId()),
         e);
     tableResult.setStatus(Status.EXCEPTION);
     tableResult.setMessage(e.getMessage());
@@ -466,7 +463,7 @@ public class SyncProcessor {
 
   private void
       ioException(String method, TableProperties tp, IOException e, TableResult tableResult) {
-    Log.e(TAG, String.format("IOException in %s for table: %s", method, tp.getDisplayName()), e);
+    Log.e(TAG, String.format("IOException in %s for table: %s", method, tp.getTableId()), e);
     tableResult.setStatus(Status.EXCEPTION);
     tableResult.setMessage(e.getMessage());
     syncResult.stats.numIoExceptions++;
@@ -474,7 +471,7 @@ public class SyncProcessor {
 
   private void exception(String method, TableProperties tp, Exception e, TableResult tableResult) {
     Log.e(TAG,
-        String.format("Unexpected exception in %s on table: %s", method, tp.getDisplayName()), e);
+        String.format("Unexpected exception in %s on table: %s", method, tp.getTableId()), e);
     tableResult.setStatus(Status.EXCEPTION);
     tableResult.setMessage(e.getMessage());
   }
@@ -727,7 +724,7 @@ public class SyncProcessor {
       // Collect
 
       UserTable allRowIds = table.getRaw(columns, new String[] { DataTableColumns.SAVEPOINT_TYPE
-      }, new String[] { DbTable.SavedStatus.COMPLETE.name()
+      }, new String[] { SavepointTypeManipulator.complete()
       }, null, null, null, null);
 
       // sort data changes into types
@@ -1050,7 +1047,7 @@ public class SyncProcessor {
     }
     UserTable rows = table.getRaw(columnsToSync,
         new String[] { DataTableColumns.SAVEPOINT_TYPE, DataTableColumns.SYNC_STATE },
-        new String[] { DbTable.SavedStatus.COMPLETE.name(), state.name() },
+        new String[] { SavepointTypeManipulator.complete(), state.name() },
         null, null, null, null);
 
     List<SyncRow> changedRows = new ArrayList<SyncRow>();
@@ -1089,9 +1086,11 @@ public class SyncProcessor {
                                 false,
                                 rows.getMetadataByElementKey(i, DataTableColumns.FORM_ID),
                                 rows.getMetadataByElementKey(i, DataTableColumns.LOCALE),
-                                rows.getMetadataByElementKey(i,
-                                    DataTableColumns.SAVEPOINT_TIMESTAMP),
+                                rows.getMetadataByElementKey(i, DataTableColumns.SAVEPOINT_TYPE),
+                                rows.getMetadataByElementKey(i, DataTableColumns.SAVEPOINT_TIMESTAMP),
                                 rows.getMetadataByElementKey(i, DataTableColumns.SAVEPOINT_CREATOR),
+                                Scope.asScope(rows.getMetadataByElementKey(i, DataTableColumns.FILTER_TYPE),
+                                    rows.getMetadataByElementKey(i, DataTableColumns.FILTER_VALUE)),
                                 values);
       changedRows.add(row);
     }
@@ -1172,7 +1171,9 @@ public class SyncProcessor {
           if ( cpListChildElementKeys == null ) {
             cpListChildElementKeys = new ArrayList<String>();
           }
-          if (!(cp.getElementName().equals(col.getElementName())
+          if (!(
+              (cp.getElementName() == col.getElementName() ||
+               ((cp.getElementName() != null) && cp.getElementName().equals(col.getElementName())) )
             && cp.isUnitOfRetention() == DataHelper.intToBool(col.getIsUnitOfRetention())
             && cpListChildElementKeys.size() == listChildElementKeys.size()
             && cpListChildElementKeys.containsAll(listChildElementKeys) )) {

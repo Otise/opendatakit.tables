@@ -173,14 +173,6 @@ public interface Synchronizer {
       throws IOException;
 
   /**
-   * Synchronize all the files in an app, including both app-level and table-
-   * level files, but not those files that are in unsynched directories.
-   *
-   * @throws ResourceAccessException
-   */
-  public void syncAllFiles() throws ResourceAccessException;
-
-  /**
    * Synchronizes the app level files. This includes any files that are not
    * associated with a particular table--i.e. those that are not in the
    * directory appid/tables/. It also excludes those files that are in a set of
@@ -209,8 +201,10 @@ public interface Synchronizer {
    * of a form. I.e. those files that are considered data.
    *
    * @param tableId
+   * @param pushLocal
+   *          true if the local files should be pushed
    * @throws ResourceAccessException
    */
-  public void syncRowDataFiles(String tableId) throws ResourceAccessException;
+  public void syncRowDataFiles(String tableId, boolean pushLocal) throws ResourceAccessException;
 
 }
