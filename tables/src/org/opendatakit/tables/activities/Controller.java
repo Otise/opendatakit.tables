@@ -22,24 +22,24 @@ import java.util.TimeZone;
 
 import org.opendatakit.common.android.data.ColumnProperties;
 import org.opendatakit.common.android.data.DbTable;
-import org.opendatakit.common.android.data.KeyValueStoreHelper;
 import org.opendatakit.common.android.data.TableProperties;
 import org.opendatakit.common.android.data.TableViewType;
 import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.data.UserTable.Row;
 import org.opendatakit.common.android.utils.DataUtil;
 import org.opendatakit.tables.R;
 import org.opendatakit.tables.types.FormType;
 import org.opendatakit.tables.utils.CollectUtil;
+import org.opendatakit.tables.utils.CollectUtil.CollectFormParameters;
 import org.opendatakit.tables.utils.Constants;
 import org.opendatakit.tables.utils.Constants.IntentKeys;
-import org.opendatakit.tables.utils.TableFileUtils;
-import org.opendatakit.tables.utils.CollectUtil.CollectFormParameters;
 import org.opendatakit.tables.utils.SurveyUtil;
 import org.opendatakit.tables.utils.SurveyUtil.SurveyFormParameters;
+import org.opendatakit.tables.utils.TableFileUtils;
 import org.opendatakit.tables.views.CellValueView;
 import org.opendatakit.tables.views.ClearableEditText;
+import org.opendatakit.tables.views.SpreadsheetUserTable.SpreadsheetCell;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
@@ -48,9 +48,7 @@ import android.graphics.Color;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.SubMenu;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
@@ -434,21 +432,21 @@ public class Controller {
    * in org.odk.collect.android.tasks.SaveToDiskTask.java, in the
    * updateInstanceDatabase() method.
    */
-  void editRow(UserTable table, int rowNum) {
+  void editRow(Row row) {
     FormType formType = FormType.constructFormType(getTableProperties());
     if ( formType.isCollectForm() ) {
       Map<String, String> elementKeyToValue = new HashMap<String, String>();
-      for (ColumnProperties cp : tp.getDatabaseColumns().values()) {
-        String value = table.getData(rowNum, tp.getColumnIndex(cp.getElementKey()));
+      for (String elementKey : tp.getPersistedColumns()) {
+        ColumnProperties cp = tp.getColumnByElementKey(elementKey);
+        String value = row.getDataOrMetadataByElementKey(cp.getElementKey());
         elementKeyToValue.put(cp.getElementKey(), value);
       }
 
       Intent intent = CollectUtil.getIntentForOdkCollectEditRow(activity, tp, elementKeyToValue,
-          null, null, null, table.getRowAtIndex(rowNum).getRowId());
+          null, null, null, row.getRowId());
 
       if (intent != null) {
-        CollectUtil.launchCollectToEditRow(activity, intent,
-            table.getRowAtIndex(rowNum).getRowId());
+        CollectUtil.launchCollectToEditRow(activity, intent, row.getRowId());
       } else {
         Log.e(TAG, "intent null when trying to create for edit row.");
       }
@@ -456,10 +454,10 @@ public class Controller {
       SurveyFormParameters params = formType.getSurveyFormParameters();
 
       Intent intent = SurveyUtil.getIntentForOdkSurveyEditRow(activity, tp,
-          appName, params, table.getRowAtIndex(rowNum).getRowId());
+          appName, params, row.getRowId());
       if ( intent != null ) {
         SurveyUtil.launchSurveyToEditRow(activity, intent, tp,
-            table.getRowAtIndex(rowNum).getRowId());
+            row.getRowId());
       }
     }
   }
@@ -783,8 +781,8 @@ public class Controller {
     CollectUtil.handleOdkCollectAddReturn(activity, appName, tpToReceiveAdd, returnCode, data);
   }
 
-  void openCellEditDialog(String rowId, String value, int colIndex) {
-    (new CellEditDialog(rowId, value, colIndex)).show();
+  void openCellEditDialog(SpreadsheetCell cell) {
+    (new CellEditDialog(cell)).show();
   }
 
   public static void launchTableActivity(Activity context, TableProperties tp, TableViewType viewType,
@@ -1028,18 +1026,14 @@ public class Controller {
 
   private class CellEditDialog extends AlertDialog {
 
-    private final String rowId;
-    private final int colIndex;
-    private final String elementKey;
+    private final SpreadsheetCell cell;
     private final CellValueView.CellEditView cev;
 
-    public CellEditDialog(String rowId, String value, int colIndex) {
+    public CellEditDialog(SpreadsheetCell cell) {
       super(activity);
-      this.rowId = rowId;
-      this.colIndex = colIndex;
-      ColumnProperties cp = tp.getColumnByIndex(colIndex);
-      this.elementKey = cp.getElementKey();
-      cev = CellValueView.getCellEditView(activity, cp, value);
+      this.cell = cell;
+      ColumnProperties cp = tp.getColumnByElementKey(cell.elementKey);
+      cev = CellValueView.getCellEditView(activity, cp, cell.value);
       buildView(activity);
     }
 
@@ -1049,14 +1043,14 @@ public class Controller {
       setButton.setOnClickListener(new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-          String value = du.validifyValue(tp.getColumnByElementKey(CellEditDialog.this.elementKey),
+          String value = du.validifyValue(tp.getColumnByElementKey(CellEditDialog.this.cell.elementKey),
               cev.getValue());
           if (value == null) {
             // TODO: alert the user
             return;
           }
           Map<String, String> values = new HashMap<String, String>();
-          values.put(CellEditDialog.this.elementKey, value);
+          values.put(CellEditDialog.this.cell.elementKey, value);
 
           // TODO: supply reasonable values for these...
           String savepointCreator = null; // user on phone
@@ -1064,7 +1058,7 @@ public class Controller {
           String formId = null; // formId used by ODK Collect
           String locale = null; // current locale
 
-          dbt.updateRow(rowId, formId, locale, timestamp, savepointCreator, values);
+          dbt.updateRow(cell.row.getRowId(), formId, locale, timestamp, savepointCreator, values);
           da.init();
           dismiss();
         }
