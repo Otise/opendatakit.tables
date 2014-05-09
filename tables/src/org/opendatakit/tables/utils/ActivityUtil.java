@@ -3,9 +3,9 @@ package org.opendatakit.tables.utils;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.opendatakit.common.android.data.ColumnProperties;
 import org.opendatakit.common.android.data.TableProperties;
 import org.opendatakit.common.android.data.UserTable;
+import org.opendatakit.common.android.data.UserTable.Row;
 import org.opendatakit.tables.activities.AbsBaseActivity;
 import org.opendatakit.tables.activities.TableLevelPreferencesActivity;
 import org.opendatakit.tables.types.FormType;
@@ -17,9 +17,9 @@ import android.os.Bundle;
 import android.util.Log;
 
 public class ActivityUtil {
-  
+
   private static final String TAG = ActivityUtil.class.getSimpleName();
-  
+
   /*
    * Examples for how this is done elsewhere can be found in:
    * Examples for how this is done in Collect can be found in the Collect code
@@ -27,18 +27,13 @@ public class ActivityUtil {
    * updateInstanceDatabase() method.
    */
   public static void editRow(
-      AbsBaseActivity activity,
-      UserTable table,
-      int rowNum) {
-    TableProperties tp = table.getTableProperties();
+      AbsBaseActivity activity, TableProperties tp, Row row) {
     FormType formType = FormType.constructFormType(tp);
     if ( formType.isCollectForm() ) {
       Map<String, String> elementKeyToValue = new HashMap<String, String>();
-      for (ColumnProperties cp : tp.getDatabaseColumns().values()) {
-        String value = table.getData(
-            rowNum,
-            tp.getColumnIndex(cp.getElementKey()));
-        elementKeyToValue.put(cp.getElementKey(), value);
+      for (String elementKey : tp.getPersistedColumns()) {
+        String value = row.getDataOrMetadataByElementKey(elementKey);
+        elementKeyToValue.put(elementKey, value);
       }
 
       Intent intent = CollectUtil.getIntentForOdkCollectEditRow(
@@ -48,11 +43,11 @@ public class ActivityUtil {
           null,
           null,
           null,
-          table.getRowAtIndex(rowNum).getRowId());
+          row.getRowId());
 
       if (intent != null) {
         CollectUtil.launchCollectToEditRow(activity, intent,
-            table.getRowAtIndex(rowNum).getRowId());
+            row.getRowId());
       } else {
         Log.e(TAG, "intent null when trying to create for edit row.");
       }
@@ -64,10 +59,10 @@ public class ActivityUtil {
           tp,
           activity.getAppName(),
           params,
-          table.getRowAtIndex(rowNum).getRowId());
+          row.getRowId());
       if ( intent != null ) {
         SurveyUtil.launchSurveyToEditRow(activity, intent, tp,
-            table.getRowAtIndex(rowNum).getRowId());
+            row.getRowId());
       }
     }
   }

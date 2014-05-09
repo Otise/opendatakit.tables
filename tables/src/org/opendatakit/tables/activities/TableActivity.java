@@ -3,7 +3,6 @@ package org.opendatakit.tables.activities;
 import java.util.Map;
 
 import org.opendatakit.common.android.data.DbTable;
-import org.opendatakit.common.android.data.KeyValueStoreHelper;
 import org.opendatakit.common.android.data.TableProperties;
 import org.opendatakit.common.android.data.TableViewType;
 import org.opendatakit.common.android.data.UserTable;
@@ -19,16 +18,13 @@ import org.opendatakit.tables.utils.SurveyUtil.SurveyFormParameters;
 import org.opendatakit.tables.utils.TableFileUtils;
 import org.opendatakit.tables.views.ClearableEditText;
 
-import android.app.ActionBar;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
 import android.view.MenuItem;
-import android.view.SubMenu;
 import android.view.View;
 import android.widget.TextView;
 
@@ -164,7 +160,7 @@ public class TableActivity extends Activity {
     refreshDbTable(mTableProperties.getTableId());
     mCurrentFragment.init();
   }
-  
+
   /**
    * @return The text in the search field.
    */
@@ -579,10 +575,8 @@ public class TableActivity extends Activity {
       intent = new Intent(this, TableActivity.class);
       break;
     case SPREADSHEET:
-      intent = new Intent(this, SpreadsheetDisplayActivity.class);
-      break;
     default:
-      intent = new Intent(this, SpreadsheetDisplayActivity.class);
+      throw new IllegalStateException("Unused pathway?!??!");
     }
     intent.putExtra(Constants.IntentKeys.APP_NAME, tp.getAppName());
     intent.putExtra(Controller.INTENT_KEY_TABLE_ID, tp.getTableId());

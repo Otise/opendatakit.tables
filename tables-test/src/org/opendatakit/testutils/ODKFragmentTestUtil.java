@@ -1,6 +1,5 @@
 package org.opendatakit.testutils;
 
-import org.opendatakit.tables.activities.AbsTableActivityStub;
 import org.robolectric.Robolectric;
 import org.robolectric.util.ActivityController;
 
@@ -14,7 +13,7 @@ import android.app.FragmentManager;
  *
  */
 public class ODKFragmentTestUtil {
-  
+
   /**
    * Starts a fragment on the Activity specified by activityClass.
    * Before calling it, set
@@ -32,7 +31,7 @@ public class ODKFragmentTestUtil {
     if (tag == null) {
       tag = TestConstants.DEFAULT_FRAGMENT_TAG;
     }
-    Activity activity = 
+    Activity activity =
         Robolectric.buildActivity(activityClass)
           .create()
           .start()
@@ -40,7 +39,7 @@ public class ODKFragmentTestUtil {
           .get();
     startFragmentHelper(activity, fragment, tag, true);
   }
-  
+
   /**
    * Attaches the fragment to the activity.
    * @param activity activity the fragment is added to

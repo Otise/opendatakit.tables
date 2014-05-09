@@ -19,7 +19,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 import org.opendatakit.common.android.data.ColorRuleGroup;
 import org.opendatakit.common.android.data.ColumnProperties;
@@ -173,7 +172,7 @@ public class TablePropertiesManager extends PreferenceActivity {
 
 
     // int[] viewTypes = settings.getPossibleViewTypes();
-    
+
     // This code got all commented out with the rewrite of TableViewType.
 //    Set<TableViewType> viewTypes = tp.getPossibleViewTypes();
 //    String[] viewTypeIds = new String[viewTypes.length];
@@ -302,21 +301,21 @@ public class TablePropertiesManager extends PreferenceActivity {
     // If the color rule type is columns, add the preference to select the
     // column.
     if (colorType.equals(COLOR_TYPE_COLUMN)) {
-      int numberOfDisplayColumns = tp.getNumberOfDisplayColumns();
-      String[] colorColDisplayNames = new String[numberOfDisplayColumns];
-      String[] colorColElementKeys = new String[numberOfDisplayColumns];
-      for (int i = 0; i < numberOfDisplayColumns; i++) {
-        ColumnProperties cp = tp.getColumnByIndex(i);
+      List<String> elementKeys = tp.getPersistedColumns();
+      String[] colorColDisplayNames = new String[elementKeys.size()];
+      String[] colorColElementKeys = new String[elementKeys.size()];
+      for (int i = 0; i < elementKeys.size(); i++) {
+        String elementKey = elementKeys.get(i);
+        ColumnProperties cp = tp.getColumnByElementKey(elementKey);
         colorColDisplayNames[i] = cp.getLocalizedDisplayName();
-        colorColElementKeys[i] = cp.getElementKey();
+        colorColElementKeys[i] = elementKey;
       }
 
-      ColumnProperties colorColumn = tp.getColumnByElementKey(kvsHelper
-          .getString(KEY_COLOR_RULE_COLUMN));
-      if (colorColumn == null) {
-        kvsHelper.setString(KEY_COLOR_RULE_COLUMN, tp.getColumnByIndex(0)
-            .getElementKey());
-        colorColumn = tp.getColumnByIndex(0);
+      ColumnProperties colorColumn = tp.getColumnByElementKey(
+          kvsHelper.getString(KEY_COLOR_RULE_COLUMN));
+      if (colorColumn == null && elementKeys.size() > 0) {
+        kvsHelper.setString(KEY_COLOR_RULE_COLUMN, elementKeys.get(0));
+        colorColumn = tp.getColumnByElementKey(elementKeys.get(0));
       }
 
       ListPreference colorColumnPref = new ListPreference(this);
@@ -381,7 +380,8 @@ public class TablePropertiesManager extends PreferenceActivity {
       final List<ColumnProperties> locationCols = new ArrayList<ColumnProperties>();
       final List<ColumnProperties> dateCols = new ArrayList<ColumnProperties>();
       final List<ColumnProperties> geoPointCols = tp.getGeopointColumns();
-      for (ColumnProperties cp : tp.getDatabaseColumns().values()) {
+      for (String elementKey : tp.getPersistedColumns()) {
+        ColumnProperties cp = tp.getColumnByElementKey(elementKey);
         if (cp.getColumnType() == ColumnType.NUMBER || cp.getColumnType() == ColumnType.INTEGER) {
           numberCols.add(cp);
           if (tp.isLatitudeColumn(geoPointCols, cp) || tp.isLongitudeColumn(geoPointCols, cp)) {
@@ -420,7 +420,8 @@ public class TablePropertiesManager extends PreferenceActivity {
     final List<ColumnProperties> locationCols = new ArrayList<ColumnProperties>();
     final List<ColumnProperties> dateCols = new ArrayList<ColumnProperties>();
     final List<ColumnProperties> geoPointCols = tp.getGeopointColumns();
-    for (ColumnProperties cp : tp.getDatabaseColumns().values()) {
+    for (String elementKey : tp.getPersistedColumns()) {
+      ColumnProperties cp = tp.getColumnByElementKey(elementKey);
       if (cp.getColumnType() == ColumnType.NUMBER || cp.getColumnType() == ColumnType.INTEGER) {
         numberCols.add(cp);
         if (tp.isLatitudeColumn(geoPointCols, cp) || tp.isLongitudeColumn(geoPointCols, cp)) {
