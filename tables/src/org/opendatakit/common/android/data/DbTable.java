@@ -176,8 +176,9 @@ public class DbTable {
      */
     static void createDbTable(SQLiteDatabase db, TableProperties tp) {
         StringBuilder colListBuilder = new StringBuilder();
-        for (ColumnProperties cp : tp.getDatabaseColumns().values()) {
-            colListBuilder.append(", " + cp.getElementKey());
+        for (String elementKey : tp.getPersistedColumns()) {
+            ColumnProperties cp = tp.getColumnByElementKey(elementKey);
+            colListBuilder.append(", " + elementKey);
             if (cp.getColumnType() == ColumnType.NUMBER) {
                 colListBuilder.append(" REAL");
             } else if (cp.getColumnType() == ColumnType.INTEGER) {
@@ -208,34 +209,15 @@ public class DbTable {
      * can contain fewer parameters and be less confusing.
      * <p>
      * Either sqlQuery or selectionKeys can be null.
-     * @param projection
      * @param sqlQuery
      * @param selectionKeys
      * @param selectionArgs
      * @param orderBy
      * @return
      */
-    public UserTable getRawHelper(List<String> projection, String sqlQuery,
+    public UserTable getRawHelper(String sqlQuery,
         String[] selectionKeys, String[] selectionArgs,
         String[] groupByArgs, String havingClause, String orderByElementKey, String orderByDirection) {
-      // The columns we will pass to the db to select. Must include the
-      // columns parameter as well as all the metadata columns.
-      List<String> columnsToSelect;
-        if (projection == null) {
-          columnsToSelect = tp.getColumnOrder();
-          columnsToSelect.addAll(ADMIN_COLUMNS);
-        } else {
-          // The caller wants just their specified columns, but they'll also
-          // have to get the admin columns.
-          columnsToSelect = new ArrayList<String>();
-          columnsToSelect.addAll(projection);
-          columnsToSelect.addAll(ADMIN_COLUMNS);
-        }
-        String[] colArr = new String[columnsToSelect.size() + 1];
-        colArr[0] = DataTableColumns.ID;
-        for (int i = 0; i < columnsToSelect.size(); i++) {
-            colArr[i + 1] = columnsToSelect.get(i);
-        }
 
         // build the group-by
         String groupByClause = null;
@@ -263,16 +245,10 @@ public class DbTable {
         Cursor c = null;
         try {
            db = tp.getReadableDatabase();
-           // here's where we actually have to be smart. If the user has
-           // provided a sqlQuery, we use that. Otherwise we build the
-           // selection up for them.
-           if (sqlQuery == null) {
-             sqlQuery = buildSelectionSql(selectionKeys);
-           } // else we just use the provided one.
-           c = db.query(tp.getDbTableName(), colArr,
+           c = db.query(tp.getDbTableName(), null,
                    sqlQuery,
                    selectionArgs, groupByClause, havingClause, orderByClause);
-           UserTable table = buildTable(c, tp, projection, sqlQuery, selectionArgs,
+           UserTable table = buildTable(c, tp, sqlQuery, selectionArgs,
                groupByArgs, havingClause, orderByElementKey, orderByDirection);
            return table;
         } finally {
@@ -281,24 +257,6 @@ public class DbTable {
           }
           db.close();
         }
-    }
-
-    /**
-     * Gets an {@link UserTable} restricted by the query as necessary. The
-     * list of columns should be the element keys to select, and should not
-     * include any metadata columns, which will all be returned in the
-     * {@link UserTable}.
-     * @param the element keys of the user-defined columns to select (if null,
-     * all columns will be selected)
-     * @param selectionKeys the column names for the WHERE clause (can be null)
-     * @param selectionArgs the selection arguments (can be null)
-     * @param orderBy the column to order by (can be null)
-     * @return a Table of the requested data
-     */
-    public UserTable getRaw(List<String> columns, String[] selectionKeys,
-            String[] selectionArgs, String[] groupByArgs, String havingClause, String orderByElementKey, String orderByDirection) {
-      return getRawHelper(columns, null, selectionKeys, selectionArgs,
-          groupByArgs, havingClause, orderByElementKey, orderByDirection);
     }
 
     /**
@@ -348,7 +306,7 @@ public class DbTable {
         String sqlQuery = s.toString();
         db = tp.getReadableDatabase();
         c = db.rawQuery(sqlQuery, selectionArgs);
-        UserTable table = buildTable(c, tp, tp.getColumnOrder(),
+        UserTable table = buildTable(c, tp,
             whereClause, selectionArgs, groupBy, having, orderByElementKey, orderByDirection);
         return table;
       } finally {
@@ -372,7 +330,6 @@ public class DbTable {
     }
 
     public ConflictTable getConflictTable() {
-      List<String> userColumns = tp.getColumnOrder();
       // The new protocol for syncing is as follows:
       // local rows and server rows both have SYNC_STATE=CONFLICT.
       // The server version will have their _conflict_type column set to either
@@ -393,12 +350,12 @@ public class DbTable {
           Integer.toString(ConflictType.SERVER_DELETED_OLD_VALUES);
       String conflictTypeServerUpdatedStr = Integer.toString(
           ConflictType.SERVER_UPDATED_UPDATED_VALUES);
-      UserTable localTable = getRawHelper(userColumns,
+      UserTable localTable = getRawHelper(
           SQL_FOR_SYNC_STATE_AND_CONFLICT_STATE, null,
           new String[] {syncStateConflictStr, conflictTypeLocalDeletedStr,
             conflictTypeLocalUpdatedStr}, null, null,
           DataTableColumns.ID, null);
-      UserTable serverTable = getRawHelper(userColumns,
+      UserTable serverTable = getRawHelper(
           SQL_FOR_SYNC_STATE_AND_CONFLICT_STATE, null,
           new String[] {syncStateConflictStr, conflictTypeServerDeletedStr,
             conflictTypeServerUpdatedStr}, null, null,
@@ -416,10 +373,9 @@ public class DbTable {
      * @param userColumnOrder the user-specified column order
      */
     private UserTable buildTable(Cursor c, TableProperties tp,
-        List<String> userColumnOrder,
         String whereClause, String[] selectionArgs, String[] groupByArgs, String havingClause,
         String orderByElementKey, String orderByDirection) {
-      return new UserTable(c, tp, userColumnOrder, whereClause, selectionArgs,
+      return new UserTable(c, tp, whereClause, selectionArgs,
           groupByArgs, havingClause, orderByElementKey, orderByDirection);
     }
 
@@ -735,20 +691,5 @@ public class DbTable {
     		}
     		db.close();
 	    }
-    }
-
-    /**
-     * Builds a string of SQL for selection with the given column names.
-     */
-    private String buildSelectionSql(String[] selectionKeys) {
-        if ((selectionKeys == null) || (selectionKeys.length == 0)) {
-            return null;
-        }
-        StringBuilder selBuilder = new StringBuilder();
-        for (String key : selectionKeys) {
-            selBuilder.append(" AND " + key + " = ?");
-        }
-        selBuilder.delete(0, 5);
-        return selBuilder.toString();
     }
 }

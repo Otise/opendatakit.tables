@@ -322,10 +322,9 @@ public abstract class CustomView extends LinearLayout {
     }
     Map<String, String> elementKeyToValue = new HashMap<String, String>();
     Row requestedRow = userTable.getRowAtIndex(0);
-    List<String> userDefinedElementKeys = userTable.getTableProperties().getColumnOrder();
-    Set<String> metadataElementKeys = userTable.getMapOfUserDataToIndex().keySet();
+    List<String> metadataElementKeys = DbTable.getAdminColumns();
     List<String> allElementKeys = new ArrayList<String>();
-    allElementKeys.addAll(userDefinedElementKeys);
+    allElementKeys.addAll(tp.getPersistedColumns());
     allElementKeys.addAll(metadataElementKeys);
     for (String elementKey : allElementKeys) {
       elementKeyToValue.put(elementKey, requestedRow.getDataOrMetadataByElementKey(elementKey));
@@ -364,7 +363,7 @@ public abstract class CustomView extends LinearLayout {
       this.mActivity = activity;
       Log.d(TAG, "calling Control Constructor");
     }
-    
+
     /**
      * Start the detail view.
      * @param tableId
@@ -388,7 +387,7 @@ public abstract class CustomView extends LinearLayout {
       this.mActivity.startActivityForResult(intent, RequestCodes.LAUNCH_VIEW);
       return true;
     }
-        
+
     /**
      * Retrieve the app name that should be used from the parent activity.
      * @return
@@ -401,7 +400,7 @@ public abstract class CustomView extends LinearLayout {
       AbsBaseActivity baseActivity = (AbsBaseActivity) this.mActivity;
       return baseActivity.getAppName();
     }
-    
+
 
     /**
      * @see {@link ControlIf#openDetailView(String, String, String)}
@@ -449,7 +448,7 @@ public abstract class CustomView extends LinearLayout {
           sqlOrderByElementName,
           sqlOrderByDirection);
     }
-    
+
     /**
      * Actually open the table. The sql-related parameters are null safe, so
      * only pass them in if necessary.
@@ -479,7 +478,7 @@ public abstract class CustomView extends LinearLayout {
           null,
           null);
     }
-    
+
     /**
      * Open the table to the given view type. The relativePath parameter is
      * null safe, and if not present will not be added. The default behavior
@@ -517,7 +516,7 @@ public abstract class CustomView extends LinearLayout {
       }
       Bundle bundle = new Bundle();
       IntentUtil.addSQLKeysToBundle(
-          bundle, 
+          bundle,
           sqlWhereClause,
           sqlSelectionArgs,
           sqlGroupBy,
@@ -531,7 +530,7 @@ public abstract class CustomView extends LinearLayout {
       this.mActivity.startActivityForResult(intent, RequestCodes.LAUNCH_VIEW);
       return true;
     }
-    
+
     /**
      * Create a new {@link Intent} to launch {@link TableDisplayActivity} with
      * the contents of bundle added to the intent's extras. The appName is
