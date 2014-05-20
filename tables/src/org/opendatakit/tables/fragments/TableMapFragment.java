@@ -9,6 +9,7 @@ import org.opendatakit.tables.utils.ActivityUtil;
 import org.opendatakit.tables.utils.Constants;
 import org.opendatakit.tables.utils.IntentUtil;
 
+import android.app.Fragment;
 import android.app.FragmentManager;
 import android.app.FragmentTransaction;
 import android.content.res.Configuration;
@@ -20,6 +21,11 @@ import android.view.ViewGroup;
 
 /**
  * A TableMapFragment displays map information about a specific table.
+ * <p>
+ * Originally this was intended to host the inner map fragment and the list
+ * view, compartmentalizing the display of a map view. However,
+ * until {@link Fragment#getChildFragmentManager()} is visible in our minimum
+ * api, this cannot host two fragments reliably.
  *
  * @author Chris Gelon (cgelon)
  * @author sudar.sam@gmail.com
@@ -28,15 +34,6 @@ public class TableMapFragment extends AbsTableDisplayFragment implements
     TableMapInnerFragmentListener {
 
   private static final String TAG = TableMapFragment.class.getSimpleName();
-
-  /** The key for the Key-Value Store Partition for the TableMapFragment. */
-//  public static final String KVS_PARTITION = "TableMapFragment";
-//  /** The key to grab which column is being used for latitude. */
-//  public static final String KEY_MAP_LAT_COL = "keyMapLatCol";
-//  /** The key to grab which column is being used for longitude. */
-//  public static final String KEY_MAP_LONG_COL = "keyMapLongCol";
-//  /** The key to grab which file is being used for the list view. */
-//  public static final String KEY_FILENAME = "keyFilename";
 
   @Override
   public void onCreate(Bundle savedInstanceState) {
@@ -141,24 +138,12 @@ public class TableMapFragment extends AbsTableDisplayFragment implements
   }
 
   @Override
-  public void onHideList() {
-    Log.d(TAG, "[onHideList]");
-    MapListViewFragment mapListViewFragment = this.getList();
-    if (mapListViewFragment == null) {
-      Log.e(TAG, "[onHideList] mapListViewFragment is null. Returning.");
-      return;
-    }
-    FragmentManager fragmentManager = this.getFragmentManager();
-    fragmentManager.beginTransaction().hide(mapListViewFragment).commit();
-  }
-
-  @Override
-  public void onSetIndex(int i) {
+  public void onSetSelectedItemIndex(int i) {
     Log.d(TAG, "[onSetIndex]");
     if (!ActivityUtil.isTabletDevice(getActivity())) {
       MapListViewFragment list = getList();
       if (list != null) {
-        list.setMapListIndex(i);
+        list.setIndexOfSelectedItem(i);
       }
     }
   }
@@ -168,7 +153,16 @@ public class TableMapFragment extends AbsTableDisplayFragment implements
     Log.d(TAG, "[onSetInnerIndexes]");
     MapListViewFragment list = getList();
     if (list != null) {
-      list.setMapListIndices(indexes);
+      list.setSubsetOfIndicesToDisplay(indexes);
+    }
+  }
+  
+
+  @Override
+  public void setNoItemSelected() {
+    MapListViewFragment list = getList();
+    if (list != null) {
+      list.setNoItemSelected();
     }
   }
 
@@ -192,4 +186,5 @@ public class TableMapFragment extends AbsTableDisplayFragment implements
   public ViewFragmentType getFragmentType() {
     return ViewFragmentType.MAP;
   }
+
 }
