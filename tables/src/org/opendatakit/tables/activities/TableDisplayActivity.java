@@ -870,20 +870,23 @@ public class TableDisplayActivity extends AbsTableActivity
   }
 
   @Override
-  public void onHideList() {
-    Log.d(TAG, "[onHideList] called. Not set up.");
-//    View view = this.findViewById(R.id.map_view_list);
-//    view.setVisibility(View.GONE);
-  }
-
-  @Override
-  public void onSetIndex(int i) {
+  public void onSetSelectedItemIndex(int i) {
     MapListViewFragment mapListViewFragment = this.findMapListViewFragment();
     if (mapListViewFragment == null) {
       Log.e(TAG, "[onSetIndex] mapListViewFragment is null! Returning");
       return;
     } else {
-      mapListViewFragment.setMapListIndex(i);
+      mapListViewFragment.setIndexOfSelectedItem(i);
+    }
+  }
+  
+  public void setNoItemSelected() {
+    MapListViewFragment mapListViewFragment = this.findMapListViewFragment();
+    if (mapListViewFragment == null) {
+      Log.e(TAG, "[setNoItemSelected] mapListViewFragment is null! Returning");
+      return;
+    } else {
+      mapListViewFragment.setNoItemSelected();
     }
   }
 
@@ -893,7 +896,7 @@ public class TableDisplayActivity extends AbsTableActivity
     if (mapListViewFragment == null) {
       Log.e(TAG, "[onSetInnerIndexes] fragment is null! Returning");
     } else {
-      mapListViewFragment.setMapListIndices(indexes);
+      mapListViewFragment.setSubsetOfIndicesToDisplay(indexes);
     }
   }
 
