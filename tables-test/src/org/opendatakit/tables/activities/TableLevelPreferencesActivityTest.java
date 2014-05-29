@@ -1,19 +1,32 @@
 package org.opendatakit.tables.activities;
 
+import static org.fest.assertions.api.ANDROID.assertThat;
+
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.robolectric.RobolectricTestRunner;
+
+import android.widget.AbsListView;
+
 
 /**
  *
  * @author sudar.sam@gmail.com
  *
  */
-//@RunWith(RobolectricTestRunner.class)
+@RunWith(RobolectricTestRunner.class)
 public class TableLevelPreferencesActivityTest {
 
   // TODO: Robolectric doesn't currently support PreferenceFragments. Wait for
   // now.
+  
+  @Test
+  public void meaninglessTest() {
+    assertThat((AbsListView) null).isNull();
+  }
 
-  TableLevelPreferencesActivityStub activity;
-
+//  TableLevelPreferencesActivityStub activity;
+//
 //  @Before
 //  public void setup() {
 //    // Create a mock TableProperties that will give us known results.
@@ -30,14 +43,9 @@ public class TableLevelPreferencesActivityTest {
 //
 //  @After
 //  public void after() {
-//    TableLevelPreferencesActivityStub.APP_NAME =
-//        TableLevelPreferencesActivityStub.DEFAULT_APP_NAME;
-//    TableLevelPreferencesActivityStub.TABLE_PROPERTIES =
-//        TableLevelPreferencesActivityStub.DEFAULT_TABLE_PROPERTIES;
-//    TableLevelPreferencesActivityStub.TABLE_ID =
-//        TableLevelPreferencesActivityStub.DEFAULT_TABLE_ID;
+//    TableLevelPreferencesActivityStub.resetState();
 //  }
-//
+
 //  @Test
 //  public void tablePreferenceFragmentNotNull() {
 //    Fragment fragment = this.activity.getFragmentManager()
