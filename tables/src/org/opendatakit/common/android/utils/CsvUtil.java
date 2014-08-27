@@ -575,9 +575,16 @@ public class CsvUtil {
         tp = TableProperties.addTable(context, appName,
             tableId, (displayName == null ? tableId : displayName), tableId);
 
+        Map<String, ColumnProperties> defns = new HashMap<String, ColumnProperties>();
         for ( ColumnInfo ci : columns.values() ) {
-          ColumnProperties cp = tp.addColumn(ci.displayName, ci.elementKey, ci.elementName,
+          ColumnProperties cp = tp.createNoPersistColumn(ci.displayName, ci.elementKey, ci.elementName,
               ci.elementType, ci.listOfStringElementKeys);
+          defns.put(cp.getElementKey(), cp);
+        }
+        tp.createColumnsForTable(defns);
+        // we have created the table...
+        for ( ColumnInfo ci : columns.values() ) {
+          ColumnProperties cp = tp.getColumnByElementKey(ci.elementKey);
           cp.addMetaDataEntries(ci.kvsEntries);
         }
         tp.addMetaDataEntries(kvsEntries, false);
@@ -738,14 +745,14 @@ public class CsvUtil {
           syncState = dbTable.getRowSyncState(v_id);
         }
         /**
-         * Insertion will set the SYNC_STATE to inserting.
+         * Insertion will set the SYNC_STATE to new_row.
          *
          * If the table is sync'd to the server, this will cause one
          * sync interaction with the server to confirm that the server
          * also has this record.
          *
          * If a record with this same rowId already exists, if it is
-         * in an inserting sync state, we update it here. Otherwise,
+         * in an new_row sync state, we update it here. Otherwise,
          * if there were any local changes, we leave the row unchanged.
          */
         if ( syncState != null ) {
@@ -771,9 +778,9 @@ public class CsvUtil {
           cv.put(DataTableColumns.FILTER_VALUE, v_filter_value);
 
 
-          cv.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+          cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
 
-          if ( syncState == SyncState.inserting ) {
+          if ( syncState == SyncState.new_row ) {
             // we do the actual update here
             dbTable.actualUpdateRowByRowId(v_id, cv);
           }
