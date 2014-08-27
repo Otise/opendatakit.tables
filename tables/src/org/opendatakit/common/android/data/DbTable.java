@@ -384,7 +384,7 @@ public class DbTable {
       String[] selectionKeys = new String[2];
       selectionKeys[0] = DataTableColumns.SYNC_STATE;
       selectionKeys[1] = DataTableColumns.CONFLICT_TYPE;
-      String syncStateConflictStr = SyncState.conflicting.name();
+      String syncStateConflictStr = SyncState.in_conflict.name();
       String conflictTypeLocalDeletedStr =
           Integer.toString(ConflictType.LOCAL_DELETED_OLD_VALUES);
       String conflictTypeLocalUpdatedStr =
@@ -423,7 +423,7 @@ public class DbTable {
     }
 
     /**
-     * Adds a row to the table with an inserting synchronization state.
+     * Adds a row to the table with a new_row synchronization state.
      * <p>
      * If the rowId is null it is not added.
      * <p>
@@ -446,7 +446,7 @@ public class DbTable {
         }
 
         // The admin columns get added here and also in actualAddRow
-        cv.put(DataTableColumns.SYNC_STATE, SyncState.inserting.name());
+        cv.put(DataTableColumns.SYNC_STATE, SyncState.new_row.name());
         cv.put(DataTableColumns.FORM_ID, formId);
         cv.put(DataTableColumns.LOCALE, locale);
         cv.put(DataTableColumns.SAVEPOINT_TYPE, savepointType);
@@ -521,13 +521,13 @@ public class DbTable {
      * the device. In this case, we do not know whether the rows on the device
      * match those on the server.
      *
-     * Reset all 'conflicting' rows to their original local state (updating or deleting).
-     * Leave all 'deleting' rows in 'deleting' state.
-     * Leave all 'updating' rows in 'updating' state.
-     * Reset all 'rest' rows to 'insert' to ensure they are sync'd to the server.
-     * Reset all 'rest_pending_files' rows to 'insert' to ensure they are sync'd to the server.
+     * Reset all 'in_conflict' rows to their original local state (changed or deleted).
+     * Leave all 'deleted' rows in 'deleted' state.
+     * Leave all 'changed' rows in 'changed' state.
+     * Reset all 'synced' rows to 'new_row' to ensure they are sync'd to the server.
+     * Reset all 'synced_pending_files' rows to 'new_row' to ensure they are sync'd to the server.
      */
-    public void changeDataRowsToInsertingState() {
+    public void changeDataRowsToNewRowState() {
 
       StringBuilder b = new StringBuilder();
 
@@ -538,7 +538,7 @@ public class DbTable {
 
       String sqlConflictingServer = b.toString();
       String argsConflictingServer[] = {
-          SyncState.conflicting.name(),
+          SyncState.in_conflict.name(),
           Integer.toString(ConflictType.SERVER_DELETED_OLD_VALUES),
           Integer.toString(ConflictType.SERVER_UPDATED_UPDATED_VALUES)
       };
@@ -551,14 +551,14 @@ public class DbTable {
 
       String sqlConflictingLocalDeleting = b.toString();
       String argsConflictingLocalDeleting[] = {
-          SyncState.deleting.name(),
+          SyncState.deleted.name(),
           Integer.toString(ConflictType.LOCAL_DELETED_OLD_VALUES)
       };
 
       // update local update conflicts to updates
       String sqlConflictingLocalUpdating = sqlConflictingLocalDeleting;
       String argsConflictingLocalUpdating[] = {
-          SyncState.updating.name(),
+          SyncState.changed.name(),
           Integer.toString(ConflictType.LOCAL_UPDATED_UPDATED_VALUES)
       };
 
@@ -569,14 +569,14 @@ public class DbTable {
 
       String sqlRest = b.toString();
       String argsRest[] = {
-          SyncState.inserting.name(),
-          SyncState.rest.name()
+          SyncState.new_row.name(),
+          SyncState.synced.name()
       };
 
       String sqlRestPendingFiles = sqlRest;
       String argsRestPendingFiles[] = {
-          SyncState.inserting.name(),
-          SyncState.rest_pending_files.name()
+          SyncState.new_row.name(),
+          SyncState.synced_pending_files.name()
       };
 
       SQLiteDatabase db = tp.getWritableDatabase();
@@ -614,8 +614,8 @@ public class DbTable {
         // UPDATE: I have used the KeyValueStoreSync to return the same value
         // as hilary was originally using. However, this might have to be
         // updated.
-        if (getSyncState(rowId) == SyncState.rest) {
-          cv.put(DataTableColumns.SYNC_STATE, SyncState.updating.name());
+        if (getSyncState(rowId) == SyncState.synced) {
+          cv.put(DataTableColumns.SYNC_STATE, SyncState.changed.name());
         }
         for (String column : values.keySet()) {
             cv.put(column, values.get(column));
@@ -679,11 +679,7 @@ public class DbTable {
         }
         // OK it is one of the data columns
         ColumnProperties cp = tp.getColumnByElementKey(key);
-        boolean retainInDb = false;
-        if (cp.getColumnType().name().equals("array") || cp.getListChildElementKeys() == null || cp.getListChildElementKeys().isEmpty()) {
-          retainInDb = true;
-        }
-        if ( !retainInDb ) {
+        if ( !cp.isUnitOfRetention() ) {
           toBeResolved.put(key, values.getAsString(key));
         }
       }
@@ -710,13 +706,7 @@ public class DbTable {
             Map<String,Object> struct = ODKFileUtils.mapper.readValue(json, Map.class);
             for ( String subkey : cp.getListChildElementKeys() ) {
               ColumnProperties subcp = tp.getColumnByElementKey(subkey);
-              boolean retainInDb = false;
-              if (subcp.getColumnType().name().equals("array") ||
-                  subcp.getListChildElementKeys() == null ||
-                  subcp.getListChildElementKeys().isEmpty()) {
-                retainInDb = true;
-              }
-              if ( retainInDb ) {
+              if ( subcp.isUnitOfRetention() ) {
                 if ( subcp.getColumnType().name().equals("integer") ) {
                   values.put(subkey, (Integer) struct.get(subcp.getElementName()));
                 } else if ( subcp.getColumnType().name().equals("number") ) {
@@ -777,7 +767,7 @@ public class DbTable {
             ConflictType.SERVER_DELETED_OLD_VALUES + ", " +
             ConflictType.SERVER_UPDATED_UPDATED_VALUES + ")";
         ContentValues updateValues = new ContentValues();
-        updateValues.put(DataTableColumns.SYNC_STATE, SyncState.updating.name());
+        updateValues.put(DataTableColumns.SYNC_STATE, SyncState.changed.name());
         updateValues.put(DataTableColumns.ROW_ETAG, serverRowETag);
         updateValues.putNull(DataTableColumns.CONFLICT_TYPE);
         for (String key : values.keySet()) {
@@ -801,17 +791,17 @@ public class DbTable {
     }
 
     /**
-     * If table is synchronized and not in an INSERTING state, marks row as
+     * If row is not in an new_row state, marks row as
      * deleted. Otherwise, actually deletes the row.
      */
     public void markDeleted(String rowId) {
       SyncState syncState = getSyncState(rowId);
-      if (syncState == SyncState.inserting) {
+      if (syncState == SyncState.new_row) {
         deleteRowActual(rowId);
-      } else if (syncState == SyncState.rest || syncState == SyncState.updating) {
+      } else if (syncState == SyncState.synced || syncState == SyncState.changed) {
         String[] whereArgs = { rowId };
         ContentValues values = new ContentValues();
-        values.put(DataTableColumns.SYNC_STATE, SyncState.deleting.name());
+        values.put(DataTableColumns.SYNC_STATE, SyncState.deleted.name());
         SQLiteDatabase db = tp.getWritableDatabase();
         try {
           db.beginTransaction();
