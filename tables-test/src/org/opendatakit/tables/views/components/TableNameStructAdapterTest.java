@@ -12,13 +12,21 @@ import java.util.Map;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.opendatakit.common.android.application.CommonApplication;
 import org.opendatakit.tables.R;
+import org.opendatakit.tables.activities.AbsBaseActivity;
+import org.opendatakit.tables.activities.AbsBaseActivityStub;
+import org.opendatakit.tables.activities.AbsTableActivityStub;
+import org.opendatakit.tables.fragments.AbsBaseFragmentStub;
 import org.opendatakit.tables.utils.TableNameStruct;
+import org.opendatakit.testutils.ODKFragmentTestUtil;
 import org.opendatakit.testutils.TestCaseUtils;
+import org.opendatakit.testutils.TestConstants;
 import org.robolectric.Robolectric;
 import org.robolectric.RobolectricTestRunner;
 import org.robolectric.shadows.ShadowDrawable;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -36,8 +44,15 @@ public class TableNameStructAdapterTest {
   @Before
   public void setup() {
     
-    TestCaseUtils.setExternalStorageMounted();
+//    SQLiteDatabase stubDb = SQLiteDatabase.create(null);
+//    DatabaseFactory factoryMock = mock(DatabaseFactory.class);
+//    doReturn(stubDb).when(factoryMock).getDatabase(any(Context.class), any(String.class));
+//    DatabaseFactory.set(factoryMock);
     
+//    ODKDatabaseUtils wrapperMock = mock(ODKDatabaseUtils.class);
+    CommonApplication.setMocked();
+    TestCaseUtils.setExternalStorageMounted();
+
     TableNameStruct structOne = new TableNameStruct(
         "first",
         "first_name");
@@ -51,9 +66,11 @@ public class TableNameStructAdapterTest {
     this.mTableNameStructs.add(structOne);
     this.mTableNameStructs.add(structTwo);
 
-    this.mAdapter = new TableNameStructAdapter(
-        null,
-        "tables",
+    AbsBaseActivity activity = ODKFragmentTestUtil.startActivityAttachFragment(
+        AbsBaseActivityStub.class,
+        null, null, null);
+    
+    this.mAdapter = new TableNameStructAdapter(activity,
         this.mTableNameStructs);
   }
 
